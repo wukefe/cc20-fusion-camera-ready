@@ -26,11 +26,11 @@ the average over 15 executions for each query.
 \head{TPC-H SQL benchmarks.}
 TPC-H \cite{TPCH2017} is a widely used SQL benchmark suite for analytical data
 processing simulating real Business to Consumer (B2C) database applications. The 
-database has 8 tables over which 22 queries are defined.  The database size can be
-varied by indicating a \textit{scale factor} (SF). For example, a scale factor of 1
-(i.e. SF1) means 1GB of input data. With an increasing scale factor, (nearly) each
-of the tables holds more data records. Our results are for SF1 but initial results
-on larger scale factors show similar results.
+database has 8 tables and 22 queries. The database size is set
+using a \textit{scale factor} (SF). For example, a scale factor of 1
+(i.e. SF1) means 1GB of input data. As the scale factor increases, (nearly) all
+of tables hold more records. Our results are for SF1 but initial results
+on larger scale factors are similar.
 
 %% For this paper, we have selected 8 of the 22 queries (q1/4/6/12/14/16/19/22).
 %% These are the queries where the basic built-in functions that we aim to fuse
@@ -58,7 +58,7 @@ Future work will look more closely at fusion potential for join operations.
 
 \begin{figure*}[htbp]
 \centering
-\includegraphics[width=\textwidth]{./src/figure/sf1-v2.pdf}
+\includegraphics[width=.95\textwidth]{./src/figure/sf1-v2.pdf}
 \caption{The result of TPC-H queries with 1GB input data (SF1).}
 \label{fig:tpch_result}
 \end{figure*}
@@ -66,18 +66,18 @@ Future work will look more closely at fusion potential for join operations.
 
 \refFig{fig:tpch_result} shows the execution times using MonetDB, HorseIR-noopt,
 HorseIR-opt1, and HorseIR-opt2 on SF1 with increasing number of threads. 
-Execution time generally decreases with increasing number of threads up to a
-certain threshold. The sweet spot for both MonetDB and HorseIR, where the best
+Execution time generally decreases with increasing number of threads up to a threshold.
+The sweet spot for both MonetDB and HorseIR, where the best
 performance is achieved, is around 16 threads. Thus, using parallel execution is
 beneficial for most queries. In q16, however, there are many small cells (18314 cells,
 average size 6.5) and thus our vector parallelization is underutilized.
 
-HorseIR-noopt has the worst performance in most cases showing that optimization
-techniques are crucial when trying to exploit array-based languages for query
+HorseIR-noopt has the worst performance in most cases showing that optimization is
+crucial when exploiting array-based languages for query
 execution. The two HorseIR-opt versions are generally not as sensitive to the
-number of threads as MonetDB, which shows quite bad performance for many
+number of threads as MonetDB, which shows poor performance for many
 queries when there are only a few threads. 
-When looking only at the optimal thread level around 16, MonetDB shows the best
+Focusing on the optimal thread count (T=16), MonetDB shows the best
 performance for one query, HorseIR-opt1 for one query, HorseIR-opt2 for two
 queries, HorseIR-opt1 and HorseIR-opt2 for two queries, and all three behave
 very similarly for two queries. That is, there are only 2 queries where our
@@ -85,15 +85,16 @@ approach is worse than one of the other approaches, and only by a small margin.
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=.9\columnwidth]{./src/figure/sf1-speedup.pdf}
+\includegraphics[width=.86\columnwidth]{./src/figure/sf1-speedup.pdf}
+\vspace{-3mm}
 \caption{Geometric means of TPC-H queries with 1GB input data (SF1).}
 \label{fig:tpch_sf1_speedup}
 \end{figure}
 
-To better understand the performance benefit of our approach across all thread counts, 
+To understand the performance benefit of our approach across all thread counts, 
 \refFig{fig:tpch_sf1_speedup} presents the geometric mean speedup for HorseIR-opt2
-over HorseIR-opt1 and MonetDB. HorseIR-opt2 provides an improvement over
-MonetDB (speedup > 1) for all but one query and the improvement is quite significant. 
+over HorseIR-opt1 and MonetDB. HorseIR-opt2 provides a significant improvement over
+MonetDB (speedup > 1) for all but one query. 
 
 \textit{When we are better.}
 In q1, our optimizer identifies eight fusible sections that are merged into one
@@ -135,7 +136,8 @@ more systematic and general approach than patterns.}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=.9\columnwidth]{./src/figure/bar-number.pdf}
+\includegraphics[width=.86\columnwidth]{./src/figure/bar-number.pdf}
+\vspace{-3mm}
 \caption{Number of element-wise fused statements in HorseIR-opt1 and our new
 fusion in HorseIR-opt2.}
 \label{fig:opt_number}
@@ -146,20 +148,22 @@ element-wise fusion in HorseIR-opt1 and the more general function fusion in
 HorseIR-opt2. Pattern-based fusion is not shown as both approaches use the
 same patterns. 
 
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=.8\columnwidth]{./src/figure/compile-time.pdf}
+\vspace{-3mm}
+\caption{Compilation time for generated C code.}
+\label{fig:compilation_time}
+\end{figure}
+
+
 As shown, our approach always fuses more statements than HorseIR-opt1.
 In q1 and q22, the large increase in fused statements is due to list-related
 statements that can now be fused without fixed patterns. Furthermore, our optimizer
 exploits fusion of mixed function kinds such as element-wise and reduction functions.
 However, as seen in the previous analysis, fusing is not always beneficial. In q22,
-we fuse significantly more than HorseIR-opt1, but the loops now contain complex
-expressions which result in worse performance.
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=.9\columnwidth]{./src/figure/compile-time.pdf}
-\caption{Compilation time for generated C code.}
-\label{fig:compilation_time}
-\end{figure}
+we fuse significantly more than HorseIR-opt1, but the resulting complex loop
+bodies decrease performance.
 
 \new{The compilation time of the generated C code seen in \refFig{fig:compilation_time}
 shows that our technique is slower to generate the binary than more naive approaches.
@@ -195,18 +199,16 @@ be effectively amortized.}
 %%% \end{tabular}
 %%% \end{table}
 
-
 \subsection{Discussion}
 
-In summary, fusion across statements is beneficial in many cases. However, there
-are two situations in which to be careful applying fusion. Firstly,
-fusing too many statements might become sub-optimal, likely due to the increased
-register pressure. In practice, one could create heuristics to determine a maximum number of statements to be fused.
+Fusion across statements is beneficial in many cases. However, there
+are two situations in which to be careful. Firstly,
+fusing too many statements might become sub-optimal, likely due to increased
+register pressure. In practice, heuristics could determine a maximum number of statements to be fused.
 
 The second situation arises when filtering conditions have a high selectivity,
 e.g., when only 10 out of a million records qualify. In this case, the benefit of
 avoiding intermediate results is negligible, while the overhead of code fusion
 might become a factor. 
-If one had enough information about the actual data, such unnecessary fusions
-could be avoided. Therefore, introducing runtime optimizations deciding when to
-fuse is an interesting avenue for future research.
+With additional data metrics, such unnecessary fusions
+could be avoided. Therefore, introducing runtime optimizations is an interesting avenue for future research.

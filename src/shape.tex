@@ -221,8 +221,8 @@ and produce a new vector. If either operand is a scalar, the single value is bro
 \refTab{rule_elem_binary} presents the shape propagation rules for binary element-wise
 functions.
 
-Statically known (constant) vector lengths provide exact shape propagation rules and
-can determine error cases at compile time. If one or more argument is a dynamically
+Statically known vector lengths provide exact shape propagation rules and
+can throw errors at compile time. If one or more argument is a dynamically
 known shape, then the resulting shape is also dynamic. If both arguments have the same
 unique ID or boolean mask, then the argument shape is propagated. In all other cases,
 a new unique shape is generated.
@@ -439,9 +439,8 @@ y               & \shapeS & \shapeV{$c_0$} & \shapeV{$d_0$} & \shapeVS{$a_0$} \\
 
 \subsubsection{Lists}
 
-List functions apply a function on cells individually and merge the results into a new list.
-For example, the \texttt{@each} function is shown in \refFig{fig:list_function}. In the
-following sections we denote the applied function as \texttt{@f}.
+List functions apply a function (\texttt{@f}) on cells individually and merge the results into a new list.
+For example, the \texttt{@each} function is shown in \refFig{fig:list_function}.
 
 \begin{figure}[htbp]
 \begin{lstlisting}[language=HorseIR, frame=single, basicstyle=\footnotesize]

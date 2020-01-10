@@ -1,9 +1,3 @@
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=.95\columnwidth]{./src/figure/overview-v4.pdf}
-\caption{Analysis and code generation overview.} \label{fig:overview}
-\end{figure}
-
 We have implemented our approach for generating fused and efficient
 \texttt{C} code in the HorseIR compiler. An overview of the workflow
 can be found in \refFig{fig:overview}.
@@ -23,3 +17,9 @@ identify fusible sections of code on a data-dependence graph.
 Lastly, we optimize the set of fused sections using predefined patterns
 and generate target C code. Patterns exploit additional optimization
 opportunities that are frequently present in SQL queries.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=.95\columnwidth]{./src/figure/overview-v4.pdf}
+\caption{Analysis and code generation overview.} \label{fig:overview}
+\end{figure}

@@ -7,9 +7,9 @@ optimization capabilities.
 \subsection{Loop Fusion}
 
 \new{
-Loop fusion is an effective technique to improve program performance as
+Loop fusion is an effective performance optimization technique as
 loops usually dominate the execution.
-In the context of array-based languages, loop fusion is applied during the code
+In array-based languages, loop fusion is applied during the code
 generation phase, when array-based functions are translated into loops of the
 target language such as C. The goal of loop fusion is to minimize the number of
 loops in the target program.
@@ -118,23 +118,23 @@ intermediate results are barely reused.
 
 The boolean selection function \texttt{@compress} is common in SQL queries
 because of the WHERE clause.
-In the example, \texttt{t2} is a boolean vector indicating the indices of the
-records that fulfill the filtering condition of the query. In (S3) and (S4)
+In the example, \texttt{t2} is a boolean vector indicating the indices of
+records that fulfill the filtering condition. In (S3) and (S4)
 @compress retrieves the corresponding element values of the
 \texttt{item\_price} and \texttt{item\_discount} columns.
 However, the intermediate results of \texttt{t3} and \texttt{t4} can be avoided
 because the retrieval can be fused with the subsequent arithmetic and
 aggregation functions. 
 
-In fact, for the given example, it is possible to fuse everything into one
-single loop as shown in Fig.~\ref{fig:motivation_example} (c).
-In this paper, we show how fusion \textit{across} built-in functions can be
-done automatically and systematically by using a principled shape and
+In fact, for the given example, it is possible to fuse the entire program
+as shown in Fig.~\ref{fig:motivation_example} (c).
+In this paper, we describe automatic and systematic fusion \textit{across}
+built-in functions can be using a principled shape and
 conformability analysis. 
 
-Importantly, note that the previous work~\OldPaper, in addition to element-wise
+Importantly, note that previous work~\OldPaper, in addition to element-wise
 fusion, also supports fusion based on pattern rules, such as tree-based patterns.
-However, using patterns is quite challenging as it requires the expertise of
+However, using patterns is challenging as it requires the expertise of
 SQL execution plans. Furthermore, there exist many different types of queries,
 and thus potentially many different patterns. It is not clear, whether the
 patterns presented in \OldPaper are exhaustive. 
