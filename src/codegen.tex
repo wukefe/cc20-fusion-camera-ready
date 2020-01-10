@@ -180,8 +180,7 @@ is used.
 for(i=0; i<len; i++){
   if(cond[i]){
       z = z Rop expr_rhs;
-  }
-}
+}}
 z = Rfinal(z);
 \end{verbatim}
 \end{small}
@@ -198,7 +197,6 @@ z = Rfinal(z);
 for(i=0; i<len; i++){
 
   z = z Rop expr_rhs;
-
 }
 z = Rfinal(z);
 \end{verbatim}
@@ -217,8 +215,7 @@ c = 0;
 for(i=0; i<len; i++){
   if(cond[i]){
     z[c++] = expr_rhs;
-  }
-}
+}}
 \end{verbatim}
 \end{small}
 \caption{Case 2} \label{fig:codegen_c2}
@@ -235,7 +232,6 @@ for(i=0; i<len; i++){
 for(i=0; i<len; i++){
 
   z[i] = expr_rhs;
-
 }
 \end{verbatim}
 \end{small}
@@ -348,7 +344,7 @@ for(i=0; i<list.len; i++){ /* loop over cells */
 }
 \end{verbatim}
 \end{small}
-%\vspace{-1mm}
+\vspace{-1mm}
 \par\noindent\rule{\columnwidth}{0.6pt}
 \caption{Code generation for lists. \texttt{Rop}: reduction operation; \texttt{Rfinal}: final reduction step (e.g. divide by element count); \texttt{t}: cell accumulator; \texttt{z}: output vector.} \label{fig:codegen_lists}
 \end{figure}

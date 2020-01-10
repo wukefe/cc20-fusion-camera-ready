@@ -10,17 +10,27 @@
 %\documentclass[sigplan,review]{acmart}\settopmatter{printfolios=true}
 
 %% For final camera-ready submission, w/ required CCS and ACM Reference
-\documentclass[sigplan]{acmart}\settopmatter{}
+\documentclass[sigplan,screen,10pt]{acmart}\settopmatter{}
 
 
 %% Conference information
 %% Supplied to authors by publisher for camera-ready submission;
 %% use defaults for review submission.
-\acmConference[CC'20]{ACM SIGPLAN 2020 International Conference on Compiler Construction}{February 22--26, 2020}{San Diego, CA, USA}
-\acmYear{2020}
-\acmISBN{} % \acmISBN{978-x-xxxx-xxxx-x/YY/MM}
-\acmDOI{} % \acmDOI{10.1145/nnnnnnn.nnnnnnn}
-\startPage{1}
+%%% \acmConference[CC'20]{ACM SIGPLAN 2020 International Conference on Compiler Construction}{February 22--26, 2020}{San Diego, CA, USA}
+%%% \acmYear{2020}
+%%% \acmISBN{} % \acmISBN{978-x-xxxx-xxxx-x/YY/MM}
+%%% \acmDOI{} % \acmDOI{10.1145/nnnnnnn.nnnnnnn}
+%%% \startPage{1}
+
+\copyrightyear{2020} 
+\acmYear{2020} 
+\setcopyright{acmcopyright}
+\acmConference[CC '20]{Proceedings of the 29th International Conference on Compiler Construction}{February 22--23, 2020}{San Diego, CA, USA}
+\acmBooktitle{Proceedings of the 29th International Conference on Compiler Construction (CC '20), February 22--23, 2020, San Diego, CA, USA}
+\acmPrice{15.00}
+\acmDOI{10.1145/3377555.3377892}
+\acmISBN{978-1-4503-7120-9/20/02}
+
 
 %% Copyright information
 %% Supplied to authors (based on authors' rights management selection;
@@ -92,28 +102,34 @@
 %% extraction tools.
 
 % Montr\'eal
-\newcommand{\affil}{\affiliation{ \department{School of Computer Science} \institution{McGill University, Canada} }}
+% \newcommand{\affil}{\affiliation{ \department{School of Computer Science} \institution{McGill University, Canada} }}
+\newcommand{\affil}{\affiliation{School of Computer Science, McGill University, Canada}}
+
+\author{Hanfeng Chen, Alexander Krolik, Bettina Kemme, Clark Verbrugge and Laurie Hendren}
+\affil
+\email{{hanfeng.chen, alexander.krolik}@mail.mcgill.ca}
+\email{{kemme, clump, hendren}@cs.mcgill.ca}
 
 %% Author with single affiliation.
-\author{Hanfeng Chen}
-\affil
-\email{hanfeng.chen@mail.mcgill.ca}
+%%\author{Hanfeng Chen}
+%%\affil
+%%\email{hanfeng.chen@mail.mcgill.ca}
 
-\author{Alexander Krolik}
-\affil
-\email{alexander.krolik@mail.mcgill.ca}
+%%\author{Alexander Krolik}
+%%\affil
+%%\email{alexander.krolik@mail.mcgill.ca}
 %
-\author{Bettina Kemme}
-\affil
-\email{kemme@cs.mcgill.ca}
+%%\author{Bettina Kemme}
+%%\affil
+%%\email{kemme@cs.mcgill.ca}
 
-\author{Clark Verbrugge}
-\affil
-\email{clump@cs.mcgill.ca}
+%%\author{Clark Verbrugge}
+%%\affil
+%%\email{clump@cs.mcgill.ca}
 
-\author{Laurie Hendren}
-\affil
-\email{hendren@cs.mcgill.ca}
+%%\author{Laurie Hendren}
+%%\affil
+%%\email{hendren@cs.mcgill.ca}
 \orcid{0000-0001-6755-9632}
 
 %% redefine short authors shown on the top-right corner
@@ -246,7 +262,7 @@
 \section{Related Work} \label{Sec:relatedwork}
 \input{src/relatedwork}
 
-% \vspace{-5mm}
+\vspace{-5mm}
 \section{Conclusions and Future Work} \label{Sec:conclusion}
 \input{src/conclusion}
 

@@ -24,25 +24,24 @@ Hyper~\cite{Neumann2011:HyPer}), it is much more general and extensible.}
 % \OldPaper shows very good results on standard database benchmarks.
 
 SQL queries are first transformed into execution plans using standard database
-optimization techniques that describe in which order and how database operators
-such as joins, selections and aggregations should be executed depending on the
-data to be analyzed. These execution plans are then translated into HorseIR,
-the resulting code is optimized using techniques from array programming, and
-finally the optimized code is compiled into multi-platform C code.
+optimization techniques that consider the order and algorithms to execute database
+operators such as joins, selections and aggregations depending on the
+data to be analyzed. Once translated into HorseIR, the resulting code can be
+optimized and compiled into multi-platform C code.
 
 The approach used in HorseIR, however, does not take full advantage of the
-optimization techniques available. Instead, it is restricted to basic code
+optimization techniques available. Instead, it is restricted to basic
 fusion of element-wise operators, and although it explores some high-level
-pattern-based optimization techniques, these require considerable knowledge of
-database operators.  Optimization potential is also reduced by extensive use of
-built-in functions, the complexity of which limits optimization.
+pattern-based optimizations, these require considerable knowledge of
+database operators.  The optimization potential is also reduced by extensive use of
+complex built-in functions.
 
 For example, it is common for SQL queries to do a selection (selecting some
 rows based on the filter criteria on one column) and then perform aggregation,
 such as a summation.  In an array-based language this can be represented as
 
 \begin{small}
-\begin{Verbatim}[xleftmargin=.3\columnwidth]
+\begin{Verbatim}[xleftmargin=.15\columnwidth]
 R = sum(filter(C, A))
 \end{Verbatim}
 \end{small}

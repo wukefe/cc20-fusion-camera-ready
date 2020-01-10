@@ -64,15 +64,14 @@ complicated vectorization techniques~\cite{menon1999case,ChenKLH16}.
 \new{
 Loop fusion for query programs is typically achieved through a fixed set of
 complex predefined set of rules.
-The DBLAB/LB query compiler~\cite{ShaikhhaKPBD016} provides fusion rules for
+The DBLAB/LB query compiler~\cite{ShaikhhaKPBD016} provides rules for
 different loop fusion algorithms to generate optimized code
 \cite{Shaikhha2018:LoopFusion}.
 WeldIR~\cite{Palkar18:Weld} adopts rule-based optimizations for element-wise
 and common-loop-head fusion.
-HorseQC\cite{FunkeBNMT18:HorseQC} and HIQUE~\cite{Krikellas10:HIQUE} present
+HorseQC~\cite{FunkeBNMT18:HorseQC} and HIQUE~\cite{Krikellas10:HIQUE} present
 rule-based fusion strategies.  
-However, just as the patterns in \OldPaper, the rule-based approach is
-challenging to generalize. % page 21
+However, just as the patterns in \OldPaper, rules are challenging to generalize. % page 21
 }
 
 \new{

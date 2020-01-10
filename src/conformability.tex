@@ -1,6 +1,6 @@
 Conformability analysis determines fusible statements of a HorseIR program for code
 generation. Using the output of shape analysis, we partition the data dependence graph
-into \textit{fusible sections} and the remaining independent statements. Two statements
+into \textit{fusible sections} and the independent statements. Two statements
 are in the same fusible section if they are conformable.
 
 \subsection{Fusible Sections}
@@ -307,9 +307,9 @@ uses this equality to correctly infer its output shape. Finally, the reduction f
 fusible section share the same loop range, \texttt{V(d)}.
 
 The code in \refFig{fig:motivation_c} shows the generated C code for the complete
-fusible section. Note the presence of an internal condition for the boolean selection
-and the accumulator for the reduction. Details of the code generation strategy for fusible
-sections are found in \refSec{Sec:codegen}.
+fusible section. Note the if-condition for boolean selection
+and the accumulator for the reduction. The code generation strategy for fusible
+sections is found in \refSec{Sec:codegen}.
 
 % We mainly focus on how to identify fusible subgraphs and generate efficient code correctly.
 %\todo{Add an example with a colored CFG tree to show which sections of the tree can be fused.}

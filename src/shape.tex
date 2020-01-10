@@ -207,13 +207,13 @@ list functions \texttt{@each*}, and other functions.
 
 \subsubsection{Vectors}
 
-For vector functions, the return shape can either be:
+For vector functions, the return shape can be:
 (1) a parameter shape;
 (2) a new vector shape;
 (3) an error occurs due to a shape mismatch.
 For case 2, we introduce notation, \shapeN{}, that generates a new dynamic shape.
 While the new shape may be identical to other shapes at runtime, our static
-analysis is conservative. Each function group has unique shape rules defined below.
+analysis is conservative.
 
 \head{Binary element-wise functions.}
 Binary element-wise functions take two vectors as input, perform an element-wise operation
@@ -347,7 +347,7 @@ t0:i32 = @compress(b, x);
 t1:i32 = @compress(b, y);
 // t0 and t1 share the same scan shape
 \end{lstlisting}
-%\vspace{-3mm}
+\vspace{-3mm}
 \caption{Example propagating the scan shape.} \label{fig:scan_shape}
 \end{figure}
 
