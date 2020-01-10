@@ -1,0 +1,255 @@
+% packages
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{fancyvrb} % for Verbatim
+\usepackage{hyperref}
+\usepackage{color}
+\usepackage{import}
+\usepackage[ruled,vlined,noend]{algorithm2e} %see algorithm2e.pdf
+\usepackage{url}
+\usepackage[framemethod=TikZ]{mdframed}
+%\usepackage{amsmath}
+\usepackage{amsfonts} % for checkmark
+\usepackage{multirow}
+\usepackage{flexisym}
+\usepackage{wrapfig}
+\usepackage{tikz} % draw trees
+\usepackage{epstopdf}
+\usepackage{seqsplit}
+\usepackage{graphics}
+
+% For strike through of font - Joseph
+\usepackage[normalem]{ulem}
+%\usepackage{cancel}
+%\usepackage{soul}
+% For inparaenum environment. - Joseph
+\usepackage{paralist}
+\usepackage{comment}
+\usepackage{setspace} % setstretch
+\usepackage{svg}
+
+% names
+\newcommand{\addr}{School of Computer Science, McGill University, Montr\'eal, Canada}
+
+% colors
+\definecolor{Orange}{rgb}{1,0.5,0}
+\definecolor{Blue}{RGB}{0,0,255}
+\definecolor{OrangeRed}{RGB}{255,69,0}
+\definecolor{LightGreen}{RGB}{11,83,69}
+\definecolor{DarkYellow}{RGB}{160,64,0}
+\definecolor{AntiqueBrass}{rgb}{0.8, 0.58, 0.46}
+\definecolor{NiceBlue}{RGB}{11, 102, 163}
+\definecolor{NiceRed}{RGB}{160, 64, 0}
+\definecolor{Grey}{RGB}{128,128,128}
+\definecolor{SlightRed}{RGB}{249,38,114}
+\definecolor{SlightPink}{RGB}{155, 89, 182}
+
+% I am using this color to highlight the text I am writing so that it is easy for you - Joseph
+\definecolor{PineGreen}{rgb}{0.0, 0.47, 0.44}
+
+\newcommand{\hgb}[1]{{\emph{\color{Blue}{#1}}}}
+% \newcommand{\hgr}[1]{{\emph{\color{OrangeRed}{#1}}}}
+\newcommand{\hgr}[1]{{\emph{\color{NiceRed}{#1}}}}
+\newcommand{\hg}[1]{\emph{#1}}
+\newcommand{\hglg}[1]{\emph{{\color{LightGreen}{#1}}}}
+\newcommand{\hgdy}[1]{\emph{{\color{DarkYellow}{#1}}}}
+\newcommand{\hga}[1]{\emph{{\color{AntiqueBrass}{#1}}}}
+
+% tools
+\newcommand{\todo}[1]{\hgb{Todo: #1}}
+\newcommand{\joseph}[1]{\hglg{Joseph: #1}}
+\newcommand{\hongji}[1]{\hgdy{Hongji: #1}}
+\newcommand{\hanfeng}[1]{\hgr{Hanfeng: #1}}
+
+% edit
+\newcommand{\head}[1]{\vspace{1mm}\noindent\textbf{#1}\hspace{2mm}}
+\newcommand{\headstep}[1]{\vspace{1mm}\noindent\textit{#1}\hspace{2mm}}
+%\renewcommand{\baselinestretch}{1.2}
+%\renewcommand{\lstlistingname}{Code} % update listing name's prefix
+
+% ref
+\newcommand{\refSec}[1]{Sec.~\ref{#1}}
+\newcommand{\refFig}[1]{Fig.~\ref{#1}}
+\newcommand{\refTable}[1]{Table~\ref{#1}}
+\newcommand{\refListing}[1]{Listing~\ref{#1}}
+\newcommand{\refAlgo}[1]{Algo.~\ref{#1}}
+\newcommand{\refFoot}[1]{\footnote{\footnotesize{#1}}}
+
+% syntax highlighting
+\usepackage{textcomp} % other glyphs needed for upquote in listings below
+\lstdefinelanguage{HorseIR}
+{ basicstyle=\footnotesize\ttfamily,
+  commentstyle=\color{Grey}\rmfamily\itshape,
+  keywordstyle=\color{SlightPink},
+  keywordstyle=[2]\color{NiceBlue},
+  keywordstyle=[3]\color{NiceRed},
+  keywordstyle=[4]\color{SlightRed},
+  % list of keywords
+  morekeywords={
+  module,
+  def,
+  import
+  },
+  keywords=[2]{
+  @table,
+  @sum,
+  @gt,
+  @load_table,
+  @column_value,
+  @and,
+  @compress,
+  @enum,
+  @list,
+  @group,
+  @values,
+  @each_right,
+  @raze,
+  @compute_discount,
+  @geq,
+  @leq,
+  @lt,
+  @each,
+  @len,
+  @vector,
+  @index_a,
+  @index,
+  @unique,
+  @mul
+  },
+  keywords=[3]{
+  table,
+  sym,
+  list,
+  i64,
+  f64,
+  bool,
+  },
+  keywords=[4]{
+  return,
+  check_cast
+  },
+  sensitive=false, % keywords are not case-sensitive
+  morecomment=[l]{//}, % l is for line comment
+  morecomment=[s]{/*}{*/}, % s is for start and end delimiter
+  morestring=[b]", % defines that strings are enclosed in double quotes
+  upquote=true % ensures that backtick displays correctly
+}
+
+\usepackage[subtle]{savetrees}  %% three levels: subtle, moderate, extreme
+%\usepackage{flushend} % has balanced columns on the last page
+\usepackage{balance} % has balanced columns on the last page
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% below for Damon 2019        %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\definecolor{mGreen}{rgb}{0,0.6,0}
+\definecolor{mGray}{rgb}{0.5,0.5,0.5}
+\definecolor{mPurple}{rgb}{0.58,0,0.82}
+\definecolor{backgroundColour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{CStyle}{
+   % backgroundcolor=\color{backgroundColour},   
+   % commentstyle=\color{mGreen},
+    commentstyle=\color{Grey}\rmfamily\itshape,
+    %keywordstyle=\color{magenta},
+    keywordstyle=\color{Blue},
+    %numberstyle=\tiny\color{mGray},
+    numberstyle=\color{mGray},
+    stringstyle=\color{mPurple},
+    %basicstyle=\footnotesize,
+    basicstyle=\footnotesize\ttfamily,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2,
+    language=C,
+    frame=single,
+    xleftmargin=2mm,
+    xrightmargin=2mm
+}
+
+\usepackage{xspace}
+\usepackage{subcaption}
+
+\newcommand{\scan}[2]{$\sigma$(#1, #2)}
+\newcommand{\tuple}[6]{$\sum$(#1, #2, #3, #4, #5, #6)}
+%\newcommand{\tupleSingle}[5]{$\sum$(#1, #2, #3, #4, #5)}
+\newcommand{\TupleId}[2]{$\Gamma$(#1, #2)}
+\newcommand{\TupleEOne}[1]{\TupleId{$E_1$}{#1}}
+\newcommand{\TupleETwo}[1]{\TupleId{$E_2$}{#1}}
+\newcommand{\TupleCase}[2]{$\Gamma\{$#1, #2$\}$}
+\newcommand{\refTab}[1]{Table \ref{#1}}
+\newcommand{\vv}{\vspace{3mm}}
+
+\newcommand{\ruleFail}{\textit{NC}\xspace}  % NC = Not Conformable
+\newcommand{\tupleNew}[3]{$\langle$#1, #2, #3$\rangle$}
+\newcommand{\scanNew}[1]{$\sigma$(#1)}
+
+
+\newcommand{\OldPaper}{\cite{Chen2018:HorseIR}\xspace}
+\newcommand{\OldPaperAuthor}{Chen et al. \OldPaper}
+\newcommand{\codeNCC}{\textit{NCC}\xspace}
+\newcommand{\codeNCA}{\textit{NCA}\xspace}
+
+\usetikzlibrary{shapes,snakes}
+
+
+\lstdefinestyle{SQLStyle}{
+   % backgroundcolor=\color{backgroundColour},   
+    commentstyle=\color{mGreen},
+    %keywordstyle=\color{magenta},
+    keywordstyle=\color{mPurple},
+    %numberstyle=\tiny\color{mGray},
+    numberstyle=\color{mGray},
+    %stringstyle=\color{mPurple},
+    %basicstyle=\footnotesize,
+    basicstyle=\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2,
+    language=sql,
+    frame=single,
+    xleftmargin=2mm
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% below for CGO 20            %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\symbot}{$\bot$\xspace}
+\newcommand{\symtop}{$\top$\xspace}
+\newcommand{\symscan}[1]{$\sigma$(#1)}
+\newcommand{\tupleSingle}[5]{\{(#1, #2, #3, #4, #5)\}}
+
+\newcommand{\shapeS}{V(1)}
+\newcommand{\shapeU}{U}
+% \newcommand{\shapeVD}[1]{V$_d$(#1)}
+% \newcommand{\shapeVC}[1]{V$_c$(#1)}
+\newcommand{\shapeV}[1]{V(#1)}
+\newcommand{\shapeVS}[1]{V$_s$(#1)}
+\newcommand{\shapeN}{$I$}
+\newcommand{\shapeE}{error}
+\newcommand{\assign}{$\gets$}
+\newcommand{\notok}{$\times$}
+\newcommand{\pass}{\checkmark\xspace}
+
+\newcommand{\shapeL}[2]{L(#1,#2)}
+\newcommand{\rulesep}{\unskip\ \vrule\ } % add a vertical line between subfigure
+%\newcommand{\new}[1]{\emph{{\color{Blue}{#1}}}}
+\newcommand{\new}[1]{#1}
+

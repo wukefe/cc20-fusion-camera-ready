@@ -1,0 +1,40 @@
+Array-based programming languages have shown significant promise for
+improving performance of column-based in-memory database systems,
+allowing elegant representation of query execution plans that are
+also amenable to standard compiler optimization techniques.
+Use of loop fusion, however, is not straightforward, due to the
+complexity of built-in functions for implementing complex database operators.
+%With the development of column-based in-memory database systems the use of
+%array-based programming languages have shown to be promising for the execution
+%of database queries. In particular, they allow for an elegant representation of
+%query execution plans, that then can be further optimized using well
+%established techniques from compiler optimizations. However, it is not
+%straightforward to apply standard optimization techniques such as loop fusion
+%as database operators are best represented by advanced built-in functions that
+%can be quite complex. 
+In this work, we apply a compiler approach to optimize SQL query execution
+plans that are expressed in an array-based intermediate representation. We
+analyze this code to 
+determine shape properties of the data being
+processed, and use a subsequent optimization phase to fuse multiple database
+operators into single, compound operations, reducing the need for separate
+computation and storage of intermediate values.  Experimental results on a
+range of TPC-H queries show that our fusion technique is effective in
+generating efficient code, improving query time over a baseline system.
+
+
+%However, the database operators found in SQL queriessuch as loop fusion. They
+%In this paper, we provide a systematic approach to apply loop fusion to
+%array-based programming languages that are designed to support database
+%queries. In-memory database systems (IMDBs) offer significant performance
+%benefits to many applications in data analytics.
+%With reduced I/O cost, however, good CPU performance is critical, but also
+%difficult to achieve given the step-by-step nature of SQL execution.
+%In this work we apply a compiler approach to optimize SQL queries in IMDBs.
+%SQL execution plans are first translated to a custom, array-based intermediate
+%representation.
+%We analyze this code to determine shape properties of the data being processed,
+
+
+% technique is effective in generating efficient code, improving query time by
+% X\% over a baseline IMDB system.

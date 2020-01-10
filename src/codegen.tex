@@ -1,0 +1,665 @@
+Our code generation strategy follows a pattern based approach for fused sections,
+whereas normal (non-fused) code calls optimized library functions. First, each fused section
+is associated with a fusion node, the nodes are optimized, and lastly the code
+is emitted.
+
+%%% In this section we first introduce fusion node which collects the meta
+%%% information of a fusible section.  Then, we present our implementation
+%%% for constructing fusion nodes.  Finally, we generate code from fusion nodes.
+
+\subsection{Fusion Nodes}
+
+Each fused section is associated with a fusion node, a collection of metadata used
+for generating the loop. For each section, we traverse the statements and collect:
+(1) loop bounds; (2) fused expressions; (3) boolean mask (if any); and (4) reduction
+operation (if any). The set of properties determines which code generation pattern
+is used.
+
+%% In this section we introduce fusion node for collecting the meta information of
+%% a fusible section, and the code generation from fusion nodes.
+
+%% One fusible section has one fusion node.
+%% A fusion node needs to record the basic meta information which can be used to
+%% construct a valid loop.  Thus, it has to traverse from the start statement of
+%% the fusible section up to its predecessors until the last statement in the
+%% fusible section.
+
+%% During the traverse, the node keeps the loop head information including the size of
+%% the loop, the condition mask if applicable, and whether it is a section for lists.
+%% Meanwhile, it has to scan statement expressions to generate corresponding
+%% expressions for both left-hand and right-hand side expressions by given type
+%% and shape information.
+%%% Q: Do we need to explain more?
+
+%% \begin{figure}[htbp]
+%% \begin{verbatim}
+%%     {
+%%       "loop_head": {
+%%         "loop_size"   : string,
+%%         "loop_cond"   : string,
+%%         "loop_isList" : boolean
+%%       },
+%%       "loop_body": {
+%%         "expr_lhs" : string,
+%%         "expr_rhs" : string,
+%%         "expr_tmp" : string[]
+%%       },
+%%       "start_stmt": stmt
+%%     }
+%% \end{verbatim}
+%% \caption{Components of a simple loop for fusion.}
+%% \label{fig:fusion_node_json}
+%% \end{figure}
+
+%%% A fusion node consists of a set of the following fields to save the meta
+%%% information for a fusible section.
+
+%%% \begin{description}
+%%% \item[\texttt{loop_head}] describes the head of loop iteration including loop
+%%% size, condition, and check for lists.
+%%% 
+%%% \begin{itemize}
+%%% \item $loop\_size$: the number of loop iterations
+%%% \item $loop\_cond$: an if-condition inside the loop
+%%% \item $loop\_isList$: whether the loop is for list or vector
+%%% \end{itemize}
+%%% 
+%%% \item[\texttt{loop_body}] represents the main computation of the loop which
+%%% contains the following components.
+%%% 
+%%% \begin{itemize}
+%%% \item $expr\_lhs$: left hand side expression 
+%%% \item $expr\_rhs$: right hand side expression
+%%% \item $expr\_tmp$: a list of temporary results
+%%% \item $is\_r$: whether the start statement has a reduction operation
+%%% \end{itemize}
+%%% 
+%%% \end{description}
+
+%%% Note that the value of $loop\_cond$ is allowed to be empty that means there is
+%%% no loop condition involved.
+%%% 
+%%% \subsection{Node Information Retrieval}
+%%% 
+%%% With a given fusion section, we fetch the information of its fusion node as described in
+%%% \refAlgo{fetch_info}.
+%%% 
+%%% \todo{The algorithm has been commented out because it is hard to make it a
+%%% short algorithm (too verbose). Will discuss with Alex to make this part clear.}
+
+%%% \begin{lstlisting}
+%%% entry:
+%%%     Input: Given a fusion section (section) with a start statement (start)
+%%%     Output: A fusion node
+%%%     initialize a fusion node n
+%%%     if (start is raze)
+%%%         genNodeList(start, section)
+%%%     else
+%%%         genNodeVector(start, section)
+%%% 
+%%%     genNodeVector(stmt, section){
+%%%         n.loop_size = genSize(stmt)
+%%%         n.loop_isList = false
+%%%         if(hasScanShape(stmt))
+%%%             n.loop_cond = genNodeVector(getScanAlias(stmt),section)
+%%%         else
+%%%             n.loop_cond = ""
+%%%         if(isReduction(stmt)) {
+%%%             n.is_r = true
+%%%             n.expr_lhs = genRop(stmt)
+%%%             setVisited(stmt)
+%%%             genNodeVectorRHS(getDefStmts(stmt)[0])
+%%%         }
+%%%         else {
+%%%             n.is_r = false
+%%%             n.expr_lhs = genTargetWithIndex(stmt)
+%%%             n.expr_rhs = genNodeVectorRHS(stmt)
+%%%         }
+%%%     }
+%%% 
+%%%     genNodeVectorRHS(stmt, section){
+%%%         setVisited(stmt)
+%%%         def = getDefStmt(stmt)
+%%%         if (def \in section){
+%%%             if (map contains the def)
+%%%                 return getOpMacro(stmt)+"("+map.get(def)+")"
+%%%             if(hasOneChild(def))
+%%%                 return getOpMacro(stmt)+"("+genNodeVectorRHS(def, section)+")"
+%%%             else {
+%%%                 tid = genTempId()    // a unique id
+%%%                 tmp = tid + "=" + genNodeVectorRHS(def)
+%%%                 map.insert(def, tid)
+%%%                 expr_tmp.add(tmp)
+%%%             }
+%%%         }
+%%%         else
+%%%             return getOpMacro(stmt)+"("+genVectorExpr(stmt)+")"
+%%%     }
+%%% 
+%%%     genNodeList(start, section){
+%%%     }
+%%% 
+%%% \end{lstlisting}
+ 
+
+%%% \begin{description}
+%%% \item[Step 0:]
+%%%     Determine if it is a fusion section for list, if true, goto Step X
+%%% \item[Step 1:]
+%%%     Identify the target (i.e. \texttt{expr_lhs}) which is stored in the start statement:
+%%%     if a reduction operation is found, a scalar return is generated.
+%%% \item[Step 2:]
+%%% \end{description}
+
+%%% \headstep{Collecting loop head.}
+
+%%% \headstep{Collecting loop expression.}
+
+\subsection{Code Generation for Vectors} \label{SubSec:CodeGen}
+
+%% \begin{verbatim}
+%% -------------------------------------------
+%% Start stmt | Has Scan? | C Code
+%% -------------------------------------------
+%%    R       |  yes      |  ...
+%%            |  no       |  ...
+%% -------------------------------------------
+%%    No R    |  yes      |  ...
+%%            |  no       |  ...
+%% -------------------------------------------
+%% \end{verbatim}
+
+\begin{figure}[htbp]
+\par\noindent\rule{\columnwidth}{0.6pt}
+% first row
+\begin{subfigure}[t]{.45\columnwidth}
+\begin{small}
+\begin{verbatim}
+// reduction: YES
+// scan: YES
+for(i=0; i<len; i++){
+  if(cond[i]){
+      z = z Rop expr_rhs;
+  }
+}
+z = Rfinal(z);
+\end{verbatim}
+\end{small}
+\caption{Case 0} \label{fig:codegen_c0}
+\end{subfigure}
+\hspace{1mm}
+\rulesep
+\hspace{2mm}
+\begin{subfigure}[t]{.45\columnwidth}
+\begin{small}
+\begin{verbatim}
+// reduction: YES
+// scan: NO
+for(i=0; i<len; i++){
+
+  z = z Rop expr_rhs;
+
+}
+z = Rfinal(z);
+\end{verbatim}
+\end{small}
+\caption{Case 1} \label{fig:codegen_c1}
+\end{subfigure}
+%\vspace{1mm}
+\par\noindent\rule{\columnwidth}{0.6pt}
+% second row
+\begin{subfigure}[t]{.45\columnwidth}
+\begin{small}
+\begin{verbatim}
+// reduction: NO
+// scan: YES
+c = 0;
+for(i=0; i<len; i++){
+  if(cond[i]){
+    z[c++] = expr_rhs;
+  }
+}
+\end{verbatim}
+\end{small}
+\caption{Case 2} \label{fig:codegen_c2}
+\end{subfigure}
+\hspace{1mm}
+\rulesep
+\hspace{2mm}
+\begin{subfigure}[t]{.45\columnwidth}
+\begin{small}
+\begin{verbatim}
+// reduction: NO
+// scan: NO
+
+for(i=0; i<len; i++){
+
+  z[i] = expr_rhs;
+
+}
+\end{verbatim}
+\end{small}
+\caption{Case 3} \label{fig:codegen_c3}
+\end{subfigure}
+%\vspace{1mm}
+\par\noindent\rule{\columnwidth}{0.6pt}
+\caption{Code generation for vectors. \texttt{Rop}: reduction operation; \texttt{Rfinal}: final reduction step (e.g. divide by element count); \texttt{z}: accumulator/output vector.} \label{fig:codegen_vectors}
+\end{figure}
+
+Code generation for fused vector operations follows 4 patterns depending on the presence
+of reduction and boolean selection. Each iterates over the length of the list, fuses the
+RHS expressions, and produces the appropriate output. Reduction nodes accumulate a scalar
+value, while non-reduction nodes create a new vector. \texttt{Rfinal} performs the final
+step of the reduction (e.g. dividing by the number of elements to compute an average).
+In the case of compression, the condition is first evaluated and the RHS computed if
+necessary. \refFig{fig:codegen_vectors} shows the variations of the code generation patterns.
+
+Note that when generating parallel code for \refFig{fig:codegen_c2}, we employ a
+strategy that:
+(1) counts the number of true elements in each segment and computes an offset for
+each segment; and
+(2) divides the boolean vector into segments evenly based on the number of cores.
+Each thread thus maintains a segment of the boolean vector independently. For all other
+cases, typical parallel strategies are effective.
+
+%%% \begin{algorithm}
+%%% \SetAlgoLined
+%%% \KwResult{Result}
+%%% let op $\gets$ op\_name\;
+%%% let x,y $\gets$ op\_args\;
+%%% \Switch{op_kind}{
+%%%   \Case{Unary Elementwise with E(op,x)}{
+%%%     \Return{isScalar(x) ? op(x) : op($\vec{x}$)}\;
+%%%   }
+%%%   \Case{Binary Elementwise with E(op,x,y)}{
+%%%     \eIf{isScalar(x)}{
+%%%       \Return{isScalar(y) ? op(x,y) : op(x,$\vec{y}$)}\;
+%%%     }{
+%%%       \Return{isScalar(y) ? op($\vec{x}$,y) : op($\vec{x}$,$\vec{y}$)}\;
+%%%     }
+%%%   }
+%%%   \Case{Reduction with R(op,x)}{
+%%%     \Return{isScalar(x) ? op(=,x) : op(=,$\vec{x}$)}\;
+%%%   }
+%%%   \Case{Scan with S(m, x)}{
+%%%     \Return{$\vec{x}$}\;
+%%%   }
+%%%   \Case{Indexing with $X$(x,y)}{
+%%%     \Return{x($\vec{y}$)}\;
+%%%   }
+%%%   \Case{Special boolean with B(x,y) and op_name as func}{
+%%%     \Return{isScalar(x) ? func(x,y) : func(x,$\vec{y}$)}\;
+%%%   }
+%%% }
+%%% \caption{Code Generation for Sub-expressions.} \label{algo:expr}
+%%% \end{algorithm}
+
+\subsection{Generating Code for Lists}
+
+%%% \begin{figure}[htbp]
+%%% \par\noindent\rule{\columnwidth}{0.6pt}
+%%% % first row
+%%% \begin{subfigure}[t]{.45\columnwidth}
+%%% \begin{verbatim}
+%%% for(i=0;i<len;i++){
+%%%   c = list[i]; // cell
+%%%   // init t
+%%%   for(j=0;j<c_len;j++){
+%%%       t = t Rop(cell[j])
+%%%   }
+%%%   z[i] = Rfinal(t);
+%%% }
+%%% \end{verbatim}
+%%% \caption{Code generation template.} \label{fig:codegen_list_temp}
+%%% \end{subfigure}
+%%% \hspace{1mm}
+%%% \rulesep
+%%% \hspace{2mm}
+%%% \begin{subfigure}[t]{.45\columnwidth}
+%%% \begin{verbatim}
+%%% for(i=0;i<len;i++){
+%%%   c = v[i]; // cell
+%%%   t = 0;  // init for sum
+%%%   for(j=0;j<c_len;j++){
+%%%       t = t + age[c[i]];
+%%%   }
+%%%   avg[i] = t/c_len;
+%%% }
+%%% \end{verbatim}
+%%% \caption{Example code for \refFig{fig:list_horseir}} \label{fig:codegen_list_example}
+%%% \end{subfigure}
+%%% \vspace{1mm}
+%%% \par\noindent\rule{\columnwidth}{0.6pt}
+%%% \caption{Code generation for lists.} \label{fig:codegen_lists}
+%%% \end{figure}
+
+\begin{figure}[htbp]
+\par\noindent\rule{\columnwidth}{0.6pt}
+%[xleftmargin=.2\columnwidth]
+\begin{small}
+\begin{verbatim} 
+for(i=0; i<list.len; i++){ /* loop over cells */
+  cell = list[i]; /* fetch one cell */
+  /* init t */
+  for(j=0; j<cell.len; j++){ /* loop over content */
+      t = t Rop (cell[j])
+  }
+  z[i] = Rfinal(t); /* store final value */
+}
+\end{verbatim}
+\end{small}
+%\vspace{-1mm}
+\par\noindent\rule{\columnwidth}{0.6pt}
+\caption{Code generation for lists. \texttt{Rop}: reduction operation; \texttt{Rfinal}: final reduction step (e.g. divide by element count); \texttt{t}: cell accumulator; \texttt{z}: output vector.} \label{fig:codegen_lists}
+\end{figure}
+
+List fusion nodes compute a single value per list cell and return a vector. \refFig{fig:codegen_lists} shows the code generation pattern for lists. As seen in
+the figure, there are two loops present: an outer loop iterating over cells and an
+inner loop computing the reduction expression for each cell.
+
+% \refFig{fig:codegen_list_example} is an example code in C for
+% \refFig{fig:list_horseir}.
+
+Note that the ratio of \texttt{list.len} and \texttt{cell.len} may vary greatly.
+When parallel code is generated, we may therefore parallelize the outer or inner loop
+depending on the data. In our implementation, we use a simple runtime heuristic based
+on the size ratio to choose which loop runs in parallel.
+
+\subsection{Further Fusion Opportunities}
+
+Fusible sections can be further fused if:
+(1) they share the same loop head, and
+(2) there is no data dependence between the loop bodies.
+This is particularly useful and common in column-based IMDBs where data is fetched
+from multiple independent columns using a single array of indices (e.g. the result
+of a join). It also improves parallelization as the number of synchronization barriers
+is reduced.
+
+%  A tuple of a code generation rule is
+%  
+%  \begin{center}
+%  T = \tupleSingle{$op\_kind$}{$op\_name$}{$n$}{$cond$}{$expr$\{, $expr$\}}\\
+%  \end{center}
+%  
+%  where
+%  
+%  \begin{itemize}
+%  \item $op\_kind$: the kind of the operation;
+%  \item $op\_name$: the name of the operation;
+%  \item $n$:  a loop from 0 (inclusive) to n (exclusive);
+%  \item $cond$: an if-condition inside the loop; and
+%  \item $expr$\{, $expr$\}: a list of expressions as input for the main computation in the loop body;
+%  \end{itemize}
+%  
+%  In the first example as follows, $E_2$ means the binary elementwise operation;
+%  the condition is set to null; and the main computation attributes to the
+%  addition of x[i] and y[i].  On the right side, we can see that its
+%  corresponding code generated from the given tuple, where the loop is generated
+%  with a range of [0,n) and the result of the addition is saved to a target
+%  array.
+%  
+%  \vv
+%  
+%  % textwidth: two columns
+%  
+%  \noindent
+%  \begin{minipage}{.53\columnwidth}
+%  \begin{tabular}{l}
+%  \textbf{Example 1:} \\
+%  \tuple{$E_2$}{PLUS}{n}{null}{x[i]}{y[i]}
+%  \end{tabular}
+%  \end{minipage}
+%  %\hfill
+%  \begin{minipage}{.37\columnwidth}
+%  \begin{tabular}{|c}
+%  %\hspace{1mm}
+%  \begin{minipage}{\columnwidth}
+%  \begin{verbatim}
+%  for(int i=0; i<n; i++){
+%    targ[i] = x[i] + y[i];
+%  }
+%  \end{verbatim}
+%  \end{minipage}
+%  \end{tabular}
+%  \end{minipage}
+%  
+%  \vspace{4mm}
+%  
+%  In the second example below, $R$ means the reduction; a condition is associated
+%  with a variable $b$; and the expression is  a multiplication of \texttt{x[i]}
+%  and \texttt{y[i]}. On the right side, we can see that the loop body contains a
+%  boolean mask \texttt{b[i]} with the main computation expression inside the true
+%  block.
+%  
+%  \vv
+%  
+%  \noindent
+%  \begin{minipage}{.53\columnwidth}
+%  \begin{tabular}{l}
+%  \textbf{Example 2:} \\
+%  \tupleSingle{R}{SUM}{$n$}{$b$}{mul(x[i],y[i])}
+%  \end{tabular}
+%  \end{minipage}
+%  %\hfill
+%  \begin{minipage}{.37\columnwidth}
+%  \begin{tabular}{|c}
+%  %\hspace{1mm}
+%  \begin{minipage}{\columnwidth}
+%  \begin{verbatim}
+%  for(int i=0; i<n; i++){
+%    if(b[i]){
+%      targ += x[i] * y[i];
+%    }
+%  }
+%  \end{verbatim}
+%  \end{minipage}
+%  \end{tabular}
+%  \end{minipage}
+%  
+%  \vv
+%  
+%  \refTab{Tab:op_list} shows the information of classified primitive functions.  The number of operands varies so that the number of elements in a tuple can be different.
+%  
+%  \noindent
+%  \begin{table}[htbp]
+%  \centering
+%  \caption{List of kinds of primitive functions} \label{Tab:op_list}
+%  \begin{tabular}{|c|c|c|}
+%  \hline
+%  Kind     & Name               & \# of Operands \\ \hline
+%  $E_1$    & Unary elementwise  & 1 \\ \hline
+%  $E_2$    & Binary elementwise & 2 \\ \hline
+%  $R$      & Reduction          & 1 \\ \hline
+%  $C$      & Compression        & 2 \\ \hline
+%  \end{tabular}
+%  \end{table}
+%  
+%  \subsection{Elementwise Function - Dyadic}
+%  
+%  \refTab{Tab:gen_elem_dyadic} presents the shape rules of dynamic elementwise functions after the conformability analysis.  Let \TupleETwo{0} denote the first rule inside the table, then we can have all 9 cases with their corresponding code generation tuples in \refTab{Tab:gen_rules_elem_dyadic}.
+%  
+%  \begin{table}[htbp]
+%  \centering
+%  \caption{Elementwise Functions - Dyadic} \label{Tab:gen_elem_dyadic}
+%  \vv
+%  \begin{tabular}{c||c|c|c}
+%  \hline
+%  x op y & \scan{$b_0$}{$n_0$} & $m_0$ ($m_0 \neq 1$) & 1 \\
+%  \hline \hline
+%  \scan{$b_1$}{$n_1$} & \scan{$b_0$}{$n_0$} & Fail & \scan{$b_1$}{$n_1$} \\
+%  \hline
+%  $m_1$ ($m_1 \neq 1$) & Fail & $m_0$ & $m_1$ \\
+%  \hline
+%  1     & \scan{$b_0$}{$n_0$} & $m_0$ & 1 \\
+%  \hline
+%  \end{tabular}
+%  \end{table}
+%  
+%  
+%  \begin{table}[htbp]
+%  \centering
+%  \caption{Code Generation Rules for Dyadic Elementwise Functions } \label{Tab:gen_rules_elem_dyadic}
+%  \vv
+%  \begin{tabular}{c||c|c|c}
+%  \hline
+%  x op y & \scan{$b_0$}{$n_0$} & $m_0$ ($m_0 \neq 1$) & 1 \\
+%  \hline \hline
+%  \scan{$b_1$}{$n_1$} & \TupleETwo{0} & \TupleETwo{1} & \TupleETwo{2} \\
+%  \hline
+%  $m_1$ ($m_1 \neq 1$) & \TupleETwo{3} & \TupleETwo{4} & \TupleETwo{5} \\
+%  \hline
+%  1     & \TupleETwo{6} & \TupleETwo{7} & \TupleETwo{8} \\
+%  \hline
+%  \end{tabular}
+%  \\ \vv
+%  \begin{tabular}{|c|l|l|}
+%  \hline
+%  Case ID & \multicolumn{1}{c|}{Code Generation Tuple} & \multicolumn{1}{c|}{Output Expr} \\
+%  \hline
+%  \TupleETwo{0} & \tuple{$E_2$}{$op$}{$n_0$}{$b_0$}{$x[i]$}{$y[i]$} & $x[i]\ op\ y[i]$  \\ \hline
+%  \TupleETwo{1} & ------ & ------ \\ \hline
+%  \TupleETwo{2} & \tuple{$E_2$}{$op$}{$n_0$}{$b_0$}{$x$}{$y[i]$}    & $x\ op\ y[i]$     \\ \hline
+%  \TupleETwo{3} & ------ & ------ \\ \hline
+%  \TupleETwo{4} & \tuple{$E_2$}{$op$}{$n_0$}{$null$}{$x[i]$}{$y[i]$}& $x[i]\ op\ y[i]$  \\ \hline
+%  \TupleETwo{5} & \tuple{$E_2$}{$op$}{$n_0$}{$null$}{$x$}{$y[i]$}   & $x\ op\ y[i]$  \\ \hline
+%  \TupleETwo{6} & \tuple{$E_2$}{$op$}{$n_0$}{$b_0$}{$x[i]$}{$y$}    & $x[i]\ op\ y$  \\ \hline
+%  \TupleETwo{7} & \tuple{$E_2$}{$op$}{$n_0$}{$null$}{$x[i]$}{$y$}   & $x[i]\ op\ y$  \\ \hline
+%  \TupleETwo{8} & \tuple{$E_2$}{$op$}{$null$}{$null$}{$x[i]$}{$y$}  & $x[i]\ op\ y$  \\ \hline
+%  \end{tabular}
+%  \end{table}
+%  
+%  
+%  %Row 1
+%  %
+%  %\begin{itemize}
+%  %\item \TupleCase{\scan{$b_1$}{$n_1$}}{\scan{$b_0$}{$n_0$}} = \tuple{$E_2$}{$op$}{$n_0$}{$b_0$}{$x[i]$}{$y[i]$}
+%  %\item \TupleCase{\scan{$b_1$}{$n_1$}}{$m_0$} = N/A
+%  %\item \TupleCase{\scan{$b_1$}{$n_1$}}{1} = \tuple{$E_2$}{$op$}{$n_0$}{$b_0$}{$x$}{$y[i]$}
+%  %\end{itemize}
+%  %
+%  %Row 2
+%  %
+%  %\begin{itemize}
+%  %\item \TupleCase{$m_1$}{\scan{$b_0$}{$n_0$}} = N/A
+%  %\item \TupleCase{$m_1$}{$m_0$} = \tuple{$E_2$}{$op$}{$n_0$}{$null$}{$x[i]$}{$y[i]$}
+%  %\item \TupleCase{$m_1$}{1} = \tuple{$E_2$}{$op$}{$n_0$}{$null$}{$x$}{$y[i]$}
+%  %\end{itemize}
+%  %
+%  %Row 3
+%  %
+%  %\begin{itemize}
+%  %\item \TupleCase{1}{\scan{$b_0$}{$n_0$}} = \tuple{$E_2$}{$op$}{$n_0$}{$b_0$}{$x[i]$}{$y$}
+%  %\item \TupleCase{1}{$m_0$} = \tuple{$E_2$}{$op$}{$n_0$}{$null$}{$x[i]$}{$y$}
+%  %\item \TupleCase{1}{1} = \tuple{$E_2$}{$op$}{$null$}{$null$}{$x[i]$}{$y$}
+%  %\end{itemize}
+%  
+%  \subsection{Elementwise Function - Monadic}
+%  
+%  \refTab{Tab:gen_elem_monadic} presents the shape rules of monadic elementwise functions after the conformability analysis.  Let \TupleEOne{0} denote the first rule inside the table, then we can have all 3 cases with their corresponding code generation tuples in \refTab{Tab:gen_rules_elem_monadic}.
+%  
+%  \begin{table}[ht!]
+%  \centering
+%  \caption{Elementwise Functions - Monadic} \label{Tab:gen_elem_monadic}
+%  \vv
+%  \begin{tabular}{c|c|c|c}
+%  \hline
+%  op x & \scan{$b_0$}{$n_0$} & $m_0$ ($m_0 \neq 1$) & 1 \\
+%  \hline
+%         & \scan{$b_0$}{$n_0$} & $m_0$ & 1 \\
+%  \hline
+%  \end{tabular}
+%  \end{table}
+%  
+%  \begin{table}[ht!]
+%  \centering
+%  \caption{Code Generation Rules for  Monadic Elementwise Functions} \label{Tab:gen_rules_elem_monadic}
+%  \vv
+%  \begin{tabular}{c|c|c|c}
+%  \hline
+%  op x & \scan{$b_0$}{$n_0$} & $m_0$ ($m_0 \neq 1$) & 1 \\
+%  \hline
+%         & \TupleEOne{0} & \TupleEOne{1} & \TupleEOne{2} \\
+%  \hline
+%  \end{tabular}
+%  \\ \vv
+%  \begin{tabular}{|c|l|}
+%  \hline
+%  Case ID & \multicolumn{1}{c|}{Code Generation Tuple} \\
+%  \hline
+%  \TupleEOne{0} & \tupleSingle{$E_1$}{$op$}{$n_0$}{$b_0$}{$x[i]$}  \\ \hline
+%  \TupleEOne{1} & \tupleSingle{$E_1$}{$op$}{$n_0$}{$null$}{$x[i]$} \\ \hline
+%  \TupleEOne{2} & \tupleSingle{$E_1$}{$op$}{$null$}{$null$}{$x$}     \\ \hline
+%  \end{tabular}
+%  \end{table}
+%  
+%  \subsection{Reduction}
+%  
+%  An operation reduction can be performed the code below which sums up total value in an integer vector \texttt{x}.
+%  
+%  
+%  \begin{minipage}{.4\columnwidth}
+%  \begin{verbatim}
+%  S1: sum = 0;
+%  S2: for(int i=0; i<n; i++){
+%  S3:     sum = sum + x[i];
+%  S4: }
+%  \end{verbatim}
+%  \end{minipage}
+%  \hfill
+%  % https://tex.stackexchange.com/a/29237
+%  \begin{minipage}{.4\columnwidth}
+%  \small
+%  \begin{tikzpicture}
+%  \node[draw, align=left] at (0,0) {\baselineskip=20pt L0: sum_0 = 0;\\ L1: sum_1 = sum_0 + x[0]; \\ L2: sum_2 = sum_1 + x[1]; \\ L3: sum_3 = sum_2 + x[2]; \\ ...};
+%  \draw [->, densely dotted, blue, line width=1pt] (-0.8,0.6)   -- (0.1,0.45);
+%  \draw [->, densely dotted, blue, line width=1pt] (-0.8,0.25)  -- (0.1,0.1);
+%  \draw [->, densely dotted, blue, line width=1pt] (-0.8,-0.15) -- (0.1,-0.3);
+%  \draw [->, densely dotted, blue, line width=1pt] (-0.8,-0.5)  -- (0.1,-0.65);
+%  \end{tikzpicture}
+%  \end{minipage}
+%  \begin{minipage}{.4\columnwidth}
+%  \end{minipage}
+%  
+%  \vv
+%  
+%  The variable \texttt{sum} in the statement \texttt{S3} has the data dependency
+%  on the previous value of \texttt{sum}.  Therefore, fusing primitive functions
+%  after the reduction is unfeasible.
+%  
+%  
+%  \begin{table}[ht!]
+%  \centering
+%  \caption{Reduction} \label{Tab:gen_reduction}
+%  \vv
+%  \begin{tabular}{c|c|c|c}
+%  \hline
+%  op x & \scan{$b_0$}{$n_0$} & $m_0$ ($m_0 \neq 1$) & 1 \\
+%  \hline
+%         & 1 & 1 & 1 \\
+%  \hline
+%  \end{tabular}
+%  \end{table}
+%  
+%  \begin{table}[ht!]
+%  \centering
+%  \caption{Code Generation Rules for Reduction} \label{Tab:gen_rules_reduction}
+%  \vv
+%  \begin{tabular}{c|c|c|c}
+%  \hline
+%  op x & \scan{$b_0$}{$n_0$} & $m_0$ ($m_0 \neq 1$) & 1 \\
+%  \hline
+%         & \TupleEOne{0} & \TupleEOne{1} & \TupleEOne{2} \\
+%  \hline
+%  \end{tabular}
+%  \\ \vv
+%  \begin{tabular}{|c|l|}
+%  \hline
+%  Case ID & \multicolumn{1}{c|}{Code Generation Tuple} \\
+%  \hline
+%  \TupleEOne{0} & \tupleSingle{$R$}{$op$}{$n_0$}{$b_0$}{$x[i]$}  \\ \hline
+%  \TupleEOne{1} & \tupleSingle{$R$}{$op$}{$n_0$}{$null$}{$x[i]$} \\ \hline
+%  \TupleEOne{2} & \tupleSingle{$R$}{$op$}{$null$}{$null$}{$x$}     \\ \hline
+%  \end{tabular}
+%  \end{table}
+
+

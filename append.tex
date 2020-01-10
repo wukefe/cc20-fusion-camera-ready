@@ -1,0 +1,224 @@
+% Orginal file name: ae-20190108.tex
+%
+% LaTeX template for Artifact Evaluation V20190108
+%
+% Prepared by 
+% * Grigori Fursin (cTuning foundation, France) 2014-2019
+% * Bruce Childers (University of Pittsburgh, USA) 2014
+%
+% See example of this Artifact Appendix in
+%  * SC'17 paper: https://dl.acm.org/citation.cfm?id=3126948
+%  * CGO'17 paper: https://www.cl.cam.ac.uk/~sa614/papers/Software-Prefetching-CGO2017.pdf
+%  * ACM ReQuEST-ASPLOS'18 paper: https://dl.acm.org/citation.cfm?doid=3229762.3229763
+%
+% (C)opyright 2014-2019
+%
+% CC BY 4.0 license
+%
+
+% \documentclass{sigplanconf}
+% 
+% \usepackage{hyperref}
+% \usepackage{url}
+% \usepackage{listings}
+% 
+% \begin{document}
+
+% \special{papersize=8.5in,11in}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% When adding this appendix to your paper, 
+% please remove above part
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\appendix
+\section{Artifact Appendix}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Abstract}
+
+This artifact is created for showing the reproducibility of our experiments in
+the paper, ``Improving Database Query Performance with Automatic Fusion''.
+submitted to CC20.  We provide the details of scripts and original data used in
+the experiments.  There are mainly two systems: HorsePower and MonetDB.
+We supply step-by-step instructions to configure and deploy both systems in the
+experiments.  In order to make it easy for reproducing our experiments, we
+release our experiments with a Docker virtual machine which can be found on DockerHub:
+\url{https://hub.docker.com/r/wukefe/cc20-docker}.
+
+\subsection{Artifact check-list (meta-information)}
+
+% {\em Obligatory. Use just a few informal keywords in all fields applicable to your artifacts
+% and remove the rest. This information is needed to find appropriate reviewers and gradually 
+% unify artifact meta information in Digital Libraries.}
+
+% See instructions
+%   http://ctuning.org/ae/submission_extra.html
+
+{\small
+\begin{itemize}
+  \item {\bf Algorithm: Yes, we have one algorithm to describe how to find fusible sections.}
+  \item {\bf Program: TPC-H (v2.17.0), included in the docker image.}
+  \item {\bf Compilation: GCC (v8.1.0), included in the docker image.}
+  \item {\bf Transformations: HorsePower, included in the docker image.}
+  \item {\bf Binary: Included in the docker image. }
+  \item {\bf Data set: TPC-H scale factor 1 has been set up properly in MonetDB.}
+  \item {\bf Run-time environment: Ubuntu 16.04, included in the docker image.}
+  \item {\bf Hardware: Intel CPUs, minimum 8GB RAM.}
+  \item {\bf Run-time state: No.}
+  \item {\bf Execution: Up to a few minutes.}
+  \item {\bf Metrics: Execution time and compilation time.}
+  \item {\bf Output: Standard database query results.}
+  \item {\bf Experiments: All instructions have been included in the DockerHub page.}
+  \item {\bf How much disk space required (approximately)?: About 15 GB for the docker image.}
+  \item {\bf How much time is needed to prepare workflow (approximately)?: Depends on how much time spent on downloading the docker image.}
+  \item {\bf How much time is needed to complete experiments (approximately)?: A few hours.}
+  \item {\bf Publicly available?: Yes.}
+  \item {\bf Code licenses (if publicly available)?: N/A.}
+  \item {\bf Data licenses (if publicly available)?: N/A.}
+  \item {\bf Workflow framework used?: No.}
+  \item {\bf Archived (provide DOI)?: Not sure if DockerHub is eligible.}
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Description}
+
+\subsubsection{How delivered}
+
+Install docker and download our latest image using the command line below.
+
+\begin{verbatim}
+docker pull wukefe/cc20-docker
+\end{verbatim}
+
+\subsubsection{Hardware dependencies}
+
+We ran all experiments on a server which has 4 Intel Xeon E7-4850 2.00GHz
+(total 40 cores/80 threads) and 128 GB RAM.
+
+\subsubsection{Software dependencies}
+
+We ran all experiments under Ubuntu 16.04.6 LTS (64-bit) with the list of the main software installed as shown below.
+
+\begin{itemize}
+\item GCC v8.1.0
+\item MonetDB v11.33.3
+\item HorsePower
+\end{itemize}
+
+\subsubsection{Data sets}
+
+We use the queries from the database benchmark TPC-H v2.17.0 (\url{http://www.tpc.org/tpch/}) and the data
+generated from the benchmark with a scale factor 1.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Installation}
+
+It should be noted that you don't need to install anything since the docker image
+has been set up properly.
+
+Download the docker image
+
+\begin{verbatim}
+>> docker pull wukefe/cc20-docker
+\end{verbatim}
+
+Run image and create a new instance container-cc20
+
+\begin{verbatim}
+>> docker run --hostname sableintel -it wukefe/cc20-docker
+\end{verbatim}
+
+% \noindent Check the version of installed tools.
+% 
+% \begin{verbatim}
+% docker>> gcc --version
+% gcc (GCC) 8.1.0
+% docker>> monetdb --version
+% MonetDB Database Server Toolkit v11.33.3 (Apr2019)
+% \end{verbatim}
+% 
+% \noindent Folder structures
+% 
+% \begin{verbatim}
+% .
+% |-- cc20
+% |   |-- HorsePower
+% |   |-- codegen
+% |   |-- monetdb
+% |   `-- plot
+% `-- datafarm
+%     `-- 2019
+% \end{verbatim}
+% 
+% \noindent Environment variable
+% 
+% \begin{verbatim}
+% export HORSE_BASE="/home/hanfeng/cc20/HorsePower"
+% \end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Experiment workflow}
+
+\begin{description}
+\item[Step 1:] Run MonetDB with TPC-H queries using different numbers of threads.
+\item[Step 2:] Run HorswPower to compile HorseIR programs to various kinds of C code with different levels of optimizations.
+\item[Step 3:] Compile and run the generated C code.
+\item[Step 4:] Collect all performance numbers, process these numbers with Excel and scripts, and use plot functions in R to generate figures.
+\end{description}
+
+\noindent Note that the exact instructions for running the experiment are found in the DockerHub page.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Evaluation and expected result}
+
+\begin{itemize}
+    \item  \textbf{MonetDB}: We measure the execution time of queries with a different number of threads (i.e. 1/2/4/8/16/32/64).
+    \item \textbf{Generated C code}: We measure the time spent on compiling C code to binary, and the execution time of the binary with a different number of threads (i.e. 1/2/4/8/16/32/64).
+\end{itemize}
+
+\noindent Note that all measures come with scripts and details of the functions we use can be found in these scripts.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Experiment customization}
+The scripts in our experiments are free to have a different number of threads.
+
+% \textbf{TODO: Mention the manual work required for MonetDB.}
+
+% \subsubsection{Execution performance}
+
+% \subsubsection{Compilation performance}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \subsection{Notes}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Methodology}
+
+Please see the details of our methodology in the DockerHub page: 
+\url{https://hub.docker.com/r/wukefe/cc20-docker}.
+
+% Extra: You can edit the content of the website using this link: \url{https://hackmd.io/@5sEA67_aR06J0Vw4WHbU_w/HyDRCdDAH}
+
+
+
+
+
+
+
+% Submission, reviewing and badging methodology:
+% 
+% \begin{itemize}
+%   \item \url{http://cTuning.org/ae/submission-20190109.html}
+%   \item \url{http://cTuning.org/ae/reviewing-20190109.html}
+%   \item \url{https://www.acm.org/publications/policies/artifact-review-badging}
+% \end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% When adding this appendix to your paper, 
+% please remove below part
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% \end{document}
+

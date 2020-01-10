@@ -1,0 +1,53 @@
+% http://www.texample.net/tikz/examples/simple-flow-chart/
+\tikzstyle{line}  = [draw, ->, >=stealth]
+\tikzstyle{block} = [node distance=8mm]
+
+\begin{figure*}[htbp]
+
+\begin{subfigure}[b]{.6\columnwidth}
+\begin{lstlisting}[style=SQLStyle, basicstyle=\footnotesize]
+SELECT
+  SUM(item_price * item_discount) AS saving
+FROM
+  store_items
+WHERE
+  item_date>=2010.09.01 AND
+  item_date<=2010.09.30;
+\end{lstlisting}
+\caption{An SQL query example} \label{fig:motivation_sql}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{.72\columnwidth}
+\begin{lstlisting}[language=HorseIR, basicstyle=\footnotesize, literate = {-}{-}1]
+// ... load columns from table
+(S0) t0:bool = @geq(c0,2010-09-01:date);
+(S1) t1:bool = @leq(c0,2010-09-30:date);
+(S2) t2:bool = @and(t0, t1);
+(S3) t3:f64  = @compress(t2, c1);
+(S4) t4:f64  = @compress(t2, c2);
+(S5) t5:f64  = @mul(t3, t4);
+(S6) t6:f64  = @sum(t5);
+// ... return result as a table
+\end{lstlisting}
+\caption{Core part of HorseIR code for (a) } \label{fig:motivation_horseir}
+\end{subfigure}
+% \hfill
+\hspace{0.07\columnwidth}
+\begin{subfigure}[b]{.6\columnwidth}
+\centering
+% xleftmargin=.15\columnwidth
+\begin{lstlisting}[style=CStyle, basicstyle=\footnotesize]
+//... load columns c0,c1,c2
+t6 = 0;
+for(int i=0; i<n; i++){
+  if(c0[i] >= 20100901
+     && c0[i] <= 20100930){
+    t6 += c1[i] * c2[i];
+  }
+}
+//... return t6, a scalar
+\end{lstlisting}
+\caption{Optimized C Code generated from (b)} \label{fig:motivation_c}
+\end{subfigure}
+\caption{Translating an SQL query from (a) to the corresponding HorseIR code shown in (b) (with columns: c0 (item_date), c1 (item_price), and c2 (item_discount)), and generating optimized C code in (c).} \label{fig:motivation_example}
+\end{figure*}

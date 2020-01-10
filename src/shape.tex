@@ -1,0 +1,485 @@
+Shape information is key to identify fusible sections of built-in functions.
+%Previous work explored simple fusion opportunities for element-wise functions and used numerous pre-defined patterns, but was unable to automatically handle more complex functions common to SQL queries (e.g. boolean selection - \texttt{@compress}).
+In this section we:
+(1) introduce our shape abstraction;
+(2) categorize built-in functions in groups by shape behaviour; and
+(3) describe propagation rules for each group.
+
+\subsection{Shape Abstraction}
+
+Shapes describe the in-memory layout of data. HorseIR has two important shapes
+used in queries: vectors and lists.
+
+\subsubsection{Vector}
+
+A vector shape describes a fixed-length one-dimensional array of homogeneous data. It
+is therefore characterized based on the number of elements as shown in \refTable{table:shapedef}.
+
+\begin{table}[htbp]
+\centering
+\caption{Definitions of vector shapes.} \label{table:shapedef}
+\begin{small}
+\begin{tabular}{|c|l|}
+\hline
+Shape       & \multicolumn{1}{c|}{Description}  \\ \hline
+\shapeS     & Vector of constant size 1 (i.e. scalar)  \\ \hline
+\shapeV{c}  & Vector of constant size \texttt{c} where c $\neq$ 1  \\ \hline
+\shapeV{d}  & Vector of unknown static size (unique ID \texttt{d})  \\ \hline
+\shapeVS{a} & Vector from boolean selection \texttt{a}  \\ \hline
+\end{tabular}
+\end{small}
+\end{table}
+
+The number of elements may either be a compile time constant, or a dynamic value
+only known at runtime. We include a separate shape for scalar data as some built-in
+functions exhibit specialized behaviour depending on the exact size.
+
+Dynamic vector shapes describe objects that depend on runtime properties. Our system
+assigns a unique ID to such vectors, so two vectors with the same ID have the
+same shape. A specialized dynamic shape, \shapeVS{a}, describes the output result
+of the boolean selection function \texttt{@compress} with boolean mask \texttt{a}. The code generator uses this boolean selection shape for further fusion and
+avoids storing intermediate results.
+
+\subsubsection{List}
+
+A list shape is composite, storing heterogeneous data in an ordered group of
+\textit{cells}. Each cell has its own shape, either a vector or a nested list.
+\begin{small}
+\begin{verbatim}
+list_shape ::= { cell_shape };
+cell_shape ::= list_shape | vector_shape;
+\end{verbatim}
+\end{small}
+We denote a list shape as \texttt{list<$L_0,L_1,...,L_{n-1}$>}, where $L_i$
+is the shape of cell $i$ for \texttt{n} cells. Note that for SQL queries,
+list cells are always vectors, as they typically represent collections of columns
+or row indices.
+
+% (1) \shapeL{n}{1} means a list which has \texttt{n} vectors and each vector has the length 1;
+% (2) \shapeL{n}{d} means a list which has \texttt{n} vectors and and a unique ID
+% \texttt{d} to represent all vectors not agree on the length 1; and
+% (3) an unknown shape.
+
+%% ALEX: This doesn't seem right here
+
+%% Having lists in HorseIR programs is common due to several database related
+%% operations, such as groupby and join.
+%% \refFig{fig:list_example} presents an example query with a groupby operation.
+%% Given an example table \texttt{Person} in \refFig{fig:list_table}, which has
+%% (1) the columns \texttt{firstname} and \texttt{lastname} store the first and
+%% last names of persons respectively; and
+%% (2) the column \texttt{age} stores the ages of persons.
+%% \refFig{fig:list_query} shows a query on the table that answers a question:
+%% \textit{What is the average age of persons who share the same last name?}
+
+%% \begin{figure}[htbp]
+%% \begin{subfigure}[b]{.5\columnwidth}
+%% \begin{tabular}{|c|c|c|}
+%% \hline
+%% firstname & lastname & age \\ \hline
+%% HF1       & Chen     & 18 \\ \hline
+%% Alex      & Krolik   & 23 \\ \hline
+%% HF2       & Chen     & 32 \\ \hline
+%% \end{tabular}
+%% \caption{An example table \texttt{Person}.} \label{fig:list_table}
+%% \end{subfigure}
+%% \hspace{3mm}
+%% \begin{subfigure}[b]{.4\columnwidth}
+%% \begin{lstlisting}[style=SQLStyle]
+%% SELECT
+%%     AVG(age)
+%% FROM
+%%     Person
+%% GROUP BY
+%%     lastname;
+%% \end{lstlisting}
+%% \caption{A simple query.} \label{fig:list_query}
+%% \end{subfigure}
+%% \caption{An example query with a groupby operation.}\label{fig:list_example}
+%% \end{figure}
+
+%% \begin{figure}[htbp]
+%% \begin{lstlisting}[language=HorseIR, frame=single]
+%% // columns
+%% firstname:str = ("HF1","Alex","HF2"):str;
+%% lastname:str  = ("Chen","Krolik","Chen"):str;
+%% age:i32       = (18, 23, 32):i32;
+%% // compute
+%% g:dict<i32,i32> = @group(lastname);
+%% v:list<i32>   = @values(g);
+%% t0:list<i32>  = @each_right(@index,age,v);
+%% t1:list<i32>  = @each(@avg,t0);
+%% avg:i32 = @raze(t1);
+%% \end{lstlisting}
+%% \caption{HorseIR code for \refFig{fig:list_query}} \label{fig:list_horseir}
+%% \end{figure}
+
+
+%% \todo{
+%%     explain this example clearly, list and cells, (explain row id ...), group
+%%     by; fetch value from dictionary.
+%% }
+%% First, the column \texttt{lastname} is performanced with a groupby operation to
+%% get a dictionary having the result of row IDs for keys and values stored in the
+%% variable \texttt{g}.  Its value can be seen as a tuple with key and value parts:
+%% \texttt{\textless(0,1):i32, ((0,2),1):i32\textgreater}.
+%% Since the variable \texttt{v} fetches the value from the dictionary, it is a
+%% vector and its value is \texttt{((0,2),1):i32}
+%% After array indexing for each cell inside the value \texttt{v}, we can have a
+%% new list with the value of \texttt{((18,32),23):i32} stored in the variable
+%% \texttt{t0}. Clearly, we see that the two ages who share the same last names
+%% %% are put together in the first cell.
+%% Since the built-in function \texttt{avg} cannot work on a list directly, we need
+%% a function \texttt{each} which takes a unary function on each cell.
+%% Finally, a function \texttt{raze} destroys barriers between cells, merges all
+%% integers into a vector, and returns it (i.e. (25,23):i32)
+
+%% \begin{figure}
+%% \begin{verbatim}
+%% typedef struct InfoNode{
+%%     Type type;
+%%     struct ShapeNode *shape;
+%%     struct InfoNode *cell;
+%%     struct InfoNode *next;
+%% } InfoNode;
+%% \end{verbatim}
+%% \caption{An InfoNode for storing type and shape information described in C language.}
+%% \label{fig:list_struct}
+%% \end{figure}
+
+%% \headstep{Data structure.}
+%% \refFig{fig:list_struct} shows the data structure for storing type and shape
+%% information for our conformability analysis.  
+%% As can be seen, a recursive data structure is used to preserve the type and
+%% shape information for lists.  It is called \texttt{InfoNode}.  Its shape
+%% information is stored in a shape node pointed by the field \texttt{shape}.
+%% The shape node is designed to represent different shapes defined in
+%% \refSec{SubSec:shape_abs_vector} and \refSec{SubSec:shape_abs_list}.
+
+\subsection{Built-in Function in Groups}\label{SubSec:groups}
+
+Built-in functions are categorized based on their predefined shape behaviours.
+This simplifies later analyses which depend on the shape behaviour and not
+the exact operation. For example, element-wise binary functions \texttt{@plus}
+and \texttt{@mul} share identical structure and may therefore share a single
+set of shape propagation rules.
+\begin{small}
+\begin{Verbatim}[xleftmargin=.3\columnwidth]
+a:i32 = @plus(A, B);
+b:i32 = @mul(A, B);
+\end{Verbatim}
+\end{small}
+HorseIR built-in functions can be categorized into the following groups based
+on shape behaviour:
+
+\begin{description}
+\item[Element-wise (E)]:
+    unary and binary functions, including arithmetic, boolean, and math. They are frequently used to represent the operators found in the WHERE clause (selection) and the SELECT clause (projection);
+
+\item[Reduction (R)]:
+    reduction functions \texttt{@sum}, \texttt{@avg}, \texttt{@min}, and \texttt{@max}. Aggregation functions of SQL;
+
+\item[Scan (S)]:
+    boolean selection functions \texttt{@compress}. After the selection, they retrieve the relevant elements for the projection;
+
+\item[Indexing (X)]:
+    indexing function \texttt{@index};
+
+\item[Special Boolean (B)]:
+    functions that return a boolean vector without implicit data dependency, such as
+    \texttt{@like} and \texttt{@member};
+
+\item[Each (H)]:
+    list functions \texttt{@each}, \texttt{@each_left}, \texttt{@each_right},
+    \texttt{@each_item}, and \texttt{@raze}. They are often needed in SQL statements with a GROUP BY;
+
+\item[Others (O)]:
+    all other functions.
+\end{description}
+Groups can be extended as needed with additional built-in functions as
+the language and libraries evolve. Each group is also associated with
+an abbreviation that is used in the following sections.
+
+\subsection{Shape Propagation Rules} \label{SubSec:propagation}
+
+Shape propagation rules are defined for each group of vector functions,
+list functions \texttt{@each*}, and other functions.
+
+\subsubsection{Vectors}
+
+For vector functions, the return shape can either be:
+(1) a parameter shape;
+(2) a new vector shape;
+(3) an error occurs due to a shape mismatch.
+For case 2, we introduce notation, \shapeN{}, that generates a new dynamic shape.
+While the new shape may be identical to other shapes at runtime, our static
+analysis is conservative. Each function group has unique shape rules defined below.
+
+\head{Binary element-wise functions.}
+Binary element-wise functions take two vectors as input, perform an element-wise operation
+and produce a new vector. If either operand is a scalar, the single value is broadcast.
+\refTab{rule_elem_binary} presents the shape propagation rules for binary element-wise
+functions.
+
+Statically known (constant) vector lengths provide exact shape propagation rules and
+can determine error cases at compile time. If one or more argument is a dynamically
+known shape, then the resulting shape is also dynamic. If both arguments have the same
+unique ID or boolean mask, then the argument shape is propagated. In all other cases,
+a new unique shape is generated.
+
+\begin{table}[htbp]
+\centering
+\caption{Rules for binary element-wise Functions (E)} \label{rule_elem_binary}
+\begin{small}
+\begin{tabular}{|c||c|c|c|c|}
+\hline
+$F_{B}$(x,y) & \multicolumn{4}{c|}{x} \\ \hline
+y       & \shapeS  & \shapeV{$c_0$} & \shapeV{$d_0$} & \shapeVS{$a_0$} \\ \hline
+\shapeS & \shapeS  & \shapeV{$c_0$} & \shapeV{$d_0$} & \shapeVS{$a_0$} \\ 
+\shapeV{$c_1$} & \shapeV{$c_1$} & \shapeV{$c_0$}$^1$ & \shapeN & \shapeN \\ 
+\shapeV{$d_1$} & \shapeV{$d_1$} & \shapeN & V($d_0$)$^2$ & \shapeN \\ 
+\shapeVS{$a_1$}& \shapeVS{$a_1$}& \shapeN & \shapeN & \shapeVS{$a_0$}$^3$ \\ \hline
+\multicolumn{5}{|c|}{$^1$: if $c_0$==$c_1$ otherwise error } \\
+\multicolumn{5}{|c|}{$^2$: if $d_0$==$d_1$ otherwise \shapeN } \\
+\multicolumn{5}{|c|}{$^3$: if $a_0$==$a_1$ otherwise \shapeN } \\
+\hline
+\end{tabular}
+\end{small}
+\end{table}
+
+%%% \begin{table}[htbp]
+%%% \centering
+%%% \caption{Element-wise Functions - Binary} \label{rule_elem_binary}
+%%% \begin{tabular}{c||c|c|c|c|c|c|c}
+%%% Binary  & \shapeS  & \shapeV{$c_0$} & \shapeV{$c_1$} & \shapeV{$d_0$} & \shapeV{$d_1$} & \shapeVS{$a_0$} & \shapeVS{$a_1$} \\ \hline
+%%% \hline
+%%% \shapeS & \shapeS  & \shapeV{$c_0$} & \shapeV{$c_1$} & \shapeV{$d_0$} & \shapeV{$d_1$} & \shapeVS{$a_0$} & \shapeVS{$a_1$} \\ \hline
+%%% \shapeV{$c_0$} & \shapeV{$c_0$} & \shapeV{$c_0$} & - & \shapeN & \shapeN & \shapeN & \shapeN \\ \hline
+%%% \shapeV{$c_1$} & \shapeV{$c_1$} & - & \shapeV{$c_1$} & \shapeN & \shapeN & \shapeN & \shapeN \\ \hline
+%%% \shapeV{$d_0$} & \shapeV{$d_0$} & \shapeN & \shapeN & V($d_0$) & \shapeN & \shapeN & \shapeN \\ \hline
+%%% \shapeV{$d_1$} & \shapeV{$d_1$} & \shapeN & \shapeN & \shapeN & V($d_1$) & \shapeN & \shapeN \\ \hline
+%%% \shapeVS{$a_0$}& \shapeVS{$a_0$} & \shapeN & \shapeN & \shapeN & \shapeN & \shapeVS{$a_0$} & \shapeN \\ \hline
+%%% \shapeVS{$a_1$}& \shapeVS{$a_1$} & \shapeN & \shapeN & \shapeN  & \shapeN & \shapeN & \shapeVS{$a_1$} \\ \hline
+%%% \end{tabular}
+%%% \end{table}
+
+\head{Unary element-wise functions.}
+Unary element-wise functions take a single vector as input and produce a new
+output vector of the same size. Dataflow rules for shape are the identity in this case.
+% \refTab{rule_elem_unary} presents the rules for unary element-wise functions.
+
+\begin{comment}
+\begin{table}[htbp]
+\centering
+\caption{Rules for unary element-wise functions (E)} \label{rule_elem_unary}
+\begin{small}
+\begin{tabular}{|c||c|c|c|c|}
+\hline
+$F_{U}(x)$ & \shapeS & \shapeV{$c_0$} & \shapeV{$d_0$} & \shapeVS{$a_0$} \\ \hline
+\hline
+Return     & \shapeS & \shapeV{$c_0$} & \shapeV{$d_0$} & \shapeVS{$a_0$} \\ \hline
+\end{tabular}
+\end{small}
+\end{table}
+\end{comment}
+
+\head{Reduction functions.}
+Reduction functions take a vector as input and compute a scalar output value.  In all
+cases this thus produces a $V(1)$ shape.
+%described in \refTab{rule_reduction}.
+
+\begin{comment}
+\begin{table}[htbp]
+\centering
+\caption{Rules for reduction functions (R)} \label{rule_reduction}
+\begin{small}
+\begin{tabular}{|c||c|c|c|c|}
+\hline
+$F_{R}$(x) & \shapeS & \shapeV{$c_0$} & \shapeV{$d_0$} & \shapeVS{$a_0$} \\ \hline
+\hline
+Return     & \shapeS & \shapeS & \shapeS & \shapeS \\ \hline
+\end{tabular}
+\end{small}
+\end{table}
+\end{comment}
+
+\begin{table}[htbp]
+\centering
+\caption{Rules for the scan function (S)} \label{rule_scan}
+\begin{small}
+\begin{tabular}{|c||c|c|c|c|c|}
+\hline
+$F_{S}$(x,y)   & \multicolumn{4}{c|}{x} \\ \hline
+y              & \shapeS & \shapeV{$c_0$} & \shapeV{$d_0$} & \shapeVS{$a_0$} \\ \hline
+\shapeS        & \shapeN & \shapeE & \shapeN & \shapeN \\ 
+\shapeV{$c_1$} & \shapeE & \shapeN$^1$ & \shapeN & \shapeN \\ 
+\shapeV{$d_1$} & \shapeN & \shapeN & \shapeVS{x}$^2$ & \shapeN \\
+\shapeVS{$a_1$} & \shapeN & \shapeN & \shapeN & \shapeVS{x} \\ \hline
+\multicolumn{5}{|c|}{$^1$: if $c_0$==$c_1$ otherwise error} \\
+\multicolumn{5}{|c|}{$^2$: if $d_0$==$d_1$ otherwise \shapeN } \\
+\hline
+%\multicolumn{6}{c}{Let $t_0$ = \shapeN, then $d_0^{\prime}$ = \shapeVS{$t_0$} if $d_0$==$d_1$ else $t_0$} \\
+%\multicolumn{6}{c}{Let $t_1$ = \shapeN, then $a_0^{\prime}$ = \shapeVS{$t_1$} } \\
+%\hline
+\end{tabular}
+\end{small}
+\end{table}
+
+\head{Scan function.}
+The boolean selection function \texttt{@compress} takes two vectors of equal
+length: a boolean mask vector, and a values vector. The output vector contains only
+those values with a corresponding \texttt{TRUE} flag in the mask. \refTable{rule_scan}
+describes the full shape rules where \texttt{x} is the mask and \texttt{y} the values
+vector.
+
+For constant sized vectors where the length agrees, the output shape is determined at
+runtime. If the lengths differ a compile-time error is thrown. Dynamic length vectors
+also generate new scan shapes parameterized on the boolean mask. As multiple value
+vectors may be compressed using the same mask, we internally map each boolean mask
+to its output shape. When propagating, this map is first checked before generating
+a new unique shape. \refFig{fig:scan_shape} shows an example of two vectors which
+have the same output scan shape.
+
+\begin{figure}[htbp]
+\begin{lstlisting}[language=HorseIR, frame=single, basicstyle=\footnotesize]
+// b:bool, x:i32, y:i32 (vectors of same length)
+t0:i32 = @compress(b, x);
+t1:i32 = @compress(b, y);
+// t0 and t1 share the same scan shape
+\end{lstlisting}
+%\vspace{-3mm}
+\caption{Example propagating the scan shape.} \label{fig:scan_shape}
+\end{figure}
+
+%%% \todo{Update table to include ^1 for error cases, V_s missing}
+
+%%% \begin{table}[htbp]
+%%% \centering
+%%% \caption{Rules for the scan function (S)} \label{rule_scan}
+%%% \begin{tabular}{c|c||c|c|c|c|c|}
+%%% \multicolumn{2}{c}{} & \multicolumn{4}{l}{1st Parameter} \\ \cline{2-6}
+%%% \multirow{5}{*}{\rotatebox[origin=c]{90}{2nd Paramter}} &
+%%% Scan    & \shapeS & \shapeV{$c_0$} & \shapeV{$d_0$} & \shapeVS{$a_0$} \\ \cline{2-6}
+%%% \cline{2-6}
+%%% & \shapeS        & \shapeN & \shapeE & \shapeN & \shapeN \\ \cline{2-6}
+%%% & \shapeV{$c_1$} & \shapeE & $c_0^{\prime}$ & \shapeN & \shapeN \\ \cline{2-6}
+%%% & \shapeV{$d_1$} & \shapeN & \shapeN & $d_0^{\prime}$ & \shapeN \\ \cline{2-6}
+%%% & \shapeVS{$a_1$} & \shapeN & \shapeN & \shapeN & $a_0^{\prime}$ \\ \cline{2-6}
+%%% %\multicolumn{6}{c}{$c_0^{\prime}$ = \shapeN if $c_0$==$c_1$ else error } \\
+%%% %\multicolumn{6}{c}{Let $t_0$ = \shapeN, then $d_0^{\prime}$ = \shapeVS{$t_0$} if $d_0$==$d_1$ else $t_0$} \\
+%%% %\multicolumn{6}{c}{Let $t_1$ = \shapeN, then $a_0^{\prime}$ = \shapeVS{$t_1$} } \\
+%%% %\hline
+%%% \end{tabular}
+%%% \end{table}
+
+\head{Array indexing function.}
+The array indexing function \texttt{@index} takes two vectors as input (values and
+indexes) and performs an indexed read. The output vector therefore contains one element
+per index, and thus its shape is determined by the shape of the index vector.
+%\refTab{rule_indexing} shows the rules for the array indexing function where \texttt{x}
+%contains the values, and \texttt{y} the indexes to fetch.
+
+\begin{comment}
+\begin{table}[htbp]
+\centering
+\caption{Rules for Array Indexing (X)} \label{rule_indexing}
+\begin{small}
+\begin{tabular}{|c||c|c|c|c|}
+\hline
+$F_{X}$(x,y) & \multicolumn{4}{c|}{x} \\ \hline
+y            & \shapeS & \shapeV{$c_0$} & \shapeV{$d_0$} & \shapeVS{$a_0$} \\ \hline
+\shapeS        & \shapeS  & \shapeS  & \shapeS  & \shapeS  \\ 
+\shapeV{$c_1$} & \shapeV{$c_1$} & \shapeV{$c_1$} & \shapeV{$c_1$} & \shapeV{$c_1$} \\ 
+\shapeV{$d_1$} & \shapeV{$d_1$} & \shapeV{$d_1$} & \shapeV{$d_1$} & \shapeV{$d_1$} \\ 
+\shapeVS{$a_1$} & \shapeVS{$a_1$} & \shapeVS{$a_1$} & \shapeVS{$a_1$} & \shapeVS{$a_1$} \\ \hline
+\end{tabular}
+\end{small}
+\end{table}
+\end{comment}
+
+\head{Special boolean functions.}
+Special boolean functions take a data vector as input and return a boolean vector
+indicating adherence to a specified property. For example, \texttt{@like(x, y)} checks
+if the data values \texttt{x} match search string \texttt{y}. Functions in this group
+therefore return the shape of the first argument.
+%Full shape rules are found in
+%\refTable{rule_boolean}, where \texttt{x} is the values and \texttt{y} the extra parameter.
+
+\begin{comment}
+\begin{table}[htbp]
+\centering
+\caption{Rules for Special boolean functions (B)} \label{rule_boolean}
+\begin{small}
+\begin{tabular}{|c||c|c|c|c|}
+\hline
+$F_{B}$(x,y)  & \multicolumn{4}{c|}{x} \\ \hline
+y               & \shapeS & \shapeV{$c_0$} & \shapeV{$d_0$} & \shapeVS{$a_0$} \\ \hline
+\shapeS         & \shapeS  & \shapeV{$c_0$} & \shapeV{$d_0$} & \shapeVS{$a_0$} \\ 
+\shapeV{$c_1$}  & \shapeS  & \shapeV{$c_0$} & \shapeV{$d_0$} & \shapeVS{$a_0$} \\ 
+\shapeV{$d_1$}  & \shapeS  & \shapeV{$c_0$} & \shapeV{$d_0$} & \shapeVS{$a_0$} \\ 
+\shapeVS{$a_1$} & \shapeS  & \shapeV{$c_0$} & \shapeV{$d_0$} & \shapeVS{$a_0$} \\ \hline
+\end{tabular}
+\end{small}
+\end{table}
+\end{comment}
+
+%%% \begin{table}[htbp]
+%%% \centering
+%%% \caption{Rules for Special boolean functions (B)} \label{rule_boolean}
+%%% \begin{tabular}{c||c|c|c|c|c}
+%%% \hline
+%%% Boolean  & \shapeS & \shapeV{$c_0$} & \shapeV{$d_0$} & \shapeVS{$a_0$} \\ \hline
+%%% \hline
+%%% \shapeS        & \shapeS  & \shapeS  & \shapeS  & \shapeS \\ \hline
+%%% \shapeV{$c_1$} & \shapeV{$c_0$} & \shapeV{$c_0$} & \shapeV{$c_0$} & \shapeV{$c_0$} \\ \hline
+%%% \shapeV{$d_1$} & \shapeV{$d_0$} & \shapeV{$d_0$} & \shapeV{$d_0$} & \shapeV{$d_0$} \\ \hline
+%%% \shapeVS{$a_1$} & \shapeVS{$a_0$} & \shapeVS{$a_0$} & \shapeVS{$a_0$} & \shapeVS{$a_0$} \\ \hline
+%%% \end{tabular}
+%%% \end{table}
+
+\subsubsection{Lists}
+
+List functions apply a function on cells individually and merge the results into a new list.
+For example, the \texttt{@each} function is shown in \refFig{fig:list_function}. In the
+following sections we denote the applied function as \texttt{@f}.
+
+\begin{figure}[htbp]
+\begin{lstlisting}[language=HorseIR, frame=single, basicstyle=\footnotesize]
+// x:i32, y:i32 vectors; @f function
+t0:list<i32> = @list(x, y);
+t1:list<i32> = @each(@f, t0);
+// t1 contains cells [@f(x), @f(y)]
+\end{lstlisting}
+%\vspace{-3mm}
+\caption{Example of a list function.} \label{fig:list_function}
+\end{figure}
+
+\sloppy % avoid a math line to be too long
+\head{Function each} applies function \texttt{@f} to each cell in a list. Each cell shape
+is therefore transformed by the function to create a new list. Given input shape
+\texttt{list<$L_0, \ldots, L_{n-1}$>} the output shape is thus
+\texttt{list<@f($L_0\texttt{)}, \ldots, \texttt{@f(}L_{n-1}\texttt{)}$>}.
+ 
+\head{Function each\_left} takes two parameters: a list and a variable \textit{of any type}.
+The function is applied on each cell of the list and the variable to form a new list with cells for
+each pairing. Given input shapes \texttt{list<$L_0, \ldots, L_{n-1}$>} and \texttt{A}, the function
+produces a new list with shape \texttt{list<@f($L_0\texttt{, A)}, \ldots, \texttt{@f(}L_{n-1}\texttt{, A)}$>}.
+
+\head{Function each\_right} takes two parameters: a variable \textit{of any type} and a list.
+The function is applied on the variable and each cell of the list to form a new list with cells for
+each pairing. Given input shapes \texttt{A} and \texttt{list<$L_0, \ldots, L_{n-1}$>}, the function
+produces a new list with shape \texttt{list<@f($\texttt{A, }L_0\texttt{)}, \ldots, \texttt{@f(A, }L_{n-1}$)>}.
+
+\head{Function each\_item} takes two lists of equal length as input and evaluates the given
+function on each pair of cells to form a new list. Given input shapes \texttt{list<$L_a$>} and
+\texttt{list<$L_b$>} the function returns a new list of shape
+\texttt{list<@f($L_{a0}, L_{b0}\texttt{)}, \ldots, \texttt{@f(}L_{a(n-1)}, L_{b(n-1)}\texttt{)}$>}.
+
+\head{Function raze} flattens a homogeneous list of vectors into a single vector, removing cell
+divisions. For any list the output shape is a dynamically sized vector \shapeV{d}.
+
+\subsubsection{Other Functions}
+
+For all other functions, a new dynamic shape (either list or vector depending on the return type) is 
+generated as the output shape. This is conservative, but correctly prevents fusing any unknown or
+non-fusible function. Further optimization is possible using pre-defined patterns.
