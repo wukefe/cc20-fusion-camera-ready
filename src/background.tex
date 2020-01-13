@@ -69,7 +69,7 @@ already performed looking at the high-level language
 
 HorseIR \OldPaper was designed to represent execution plans for SQL queries
 where data is represented in column-format and assumed to reside in
-main-memory. HorseIR represents the columns of the database tables as vectors,
+main memory. HorseIR represents the columns of the database tables as vectors,
 and uses lists for compound data. It provides dozens of data types to
 accommodate the many data types found in database systems. 
 Moreover, it supports a large set of array-based built-in functions that
@@ -87,8 +87,8 @@ columns \texttt{item_price} and \texttt{item\_discount}, performing an
 element-wise arithmetic function (multiplication) and then aggregation over the
 result. 
 
-Such a query is first translated into a query execution plan. The previous
-work~\OldPaper uses the advanced query optimizer of the HyPer database
+Such a query is first translated into a query execution plan. 
+\OldPaperAuthor use the advanced query optimizer of the HyPer database
 system~\cite{Neumann2011:HyPer} to generate high-performance execution plans.
 Then, the execution plan is translated into HorseIR using both standard array
 language and database-specific built-in functions. By not directly translating
@@ -97,9 +97,9 @@ approach leverages the extensive SQL-specific query optimization experience of
 the database community.
 
 Fig.~\ref{fig:motivation_horseir} shows the resulting HorseIR program without
-optimization and many intermediate results. From there, the previous
-work~\OldPaper proposes optimizations based on element-wise fusion and fusion
-with patterns. For example, (S0) and (S1) in the HorseIR program are easily
+optimization and many intermediate results. From there, \OldPaperAuthor propose
+optimizations based on element-wise fusion and fusion
+with patterns. For example, statements (S0) and (S1) in the HorseIR program are easily
 fused into one statement, as \texttt{@gt} and \texttt{@lt} are element-wise
 functions. Since there is a large set of such functions, this approach has
 shown to be very beneficial. 
@@ -108,11 +108,11 @@ are dependence-free.
 
 
 However, once functions are more complex, such as the \texttt{@compress}
-functions of lines (S3) and (S4) in the example, fusion is no longer
+functions of statements (S3) and (S4) in the example, fusion is no longer
 straightforward, as these high-level built-in functions contain data-dependent
 loops implicitly. 
-Thus, fusion across such functions is not supported by the previous
-work~\OldPaper which instead generates separate loops for them.
+Thus, fusion across such functions is not supported by 
+\OldPaper which instead generates separate loops for them.
 This can become a severe performance bottleneck, especially when the
 intermediate results are barely reused. 
 
@@ -132,8 +132,8 @@ In this paper, we describe automatic and systematic fusion \textit{across}
 built-in functions can be using a principled shape and
 conformability analysis. 
 
-Importantly, note that previous work~\OldPaper, in addition to element-wise
-fusion, also supports fusion based on pattern rules, such as tree-based patterns.
+Importantly, note that \OldPaperAuthor, in addition to element-wise
+fusion, also support fusion based on pattern rules, such as tree-based patterns.
 However, using patterns is challenging as it requires the expertise of
 SQL execution plans. Furthermore, there exist many different types of queries,
 and thus potentially many different patterns. It is not clear, whether the

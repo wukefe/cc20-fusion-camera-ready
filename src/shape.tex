@@ -30,14 +30,15 @@ Shape       & \multicolumn{1}{c|}{Description}  \\ \hline
 \end{small}
 \end{table}
 
-The number of elements may either be a compile time constant, or a dynamic value
+The number of elements may either be a compile-time constant, or a dynamic value
 only known at runtime. We include a separate shape for scalar data as some built-in
 functions exhibit specialized behaviour depending on the exact size.
 
 Dynamic vector shapes describe objects that depend on runtime properties. Our system
 assigns a unique ID to such vectors, so two vectors with the same ID have the
 same shape. A specialized dynamic shape, \shapeVS{a}, describes the output result
-of the boolean selection function \texttt{@compress} with boolean mask \texttt{a}. The code generator uses this boolean selection shape for further fusion and
+of the boolean selection function \texttt{@compress} with the boolean mask \texttt{a}.
+The code generator uses this boolean selection shape for further fusion and
 avoids storing intermediate results.
 
 \subsubsection{List}
@@ -190,7 +191,7 @@ on shape behaviour:
     \texttt{@like} and \texttt{@member};
 
 \item[Each (H)]:
-    list functions \texttt{@each}, \texttt{@each_left}, \texttt{@each_right},
+    list functions \texttt{@each}, \texttt{@each_left}, \\ \texttt{@each_right},
     \texttt{@each_item}, and \texttt{@raze}. They are often needed in SQL statements with a GROUP BY;
 
 \item[Others (O)]:
@@ -216,7 +217,7 @@ While the new shape may be identical to other shapes at runtime, our static
 analysis is conservative.
 
 \head{Binary element-wise functions.}
-Binary element-wise functions take two vectors as input, perform an element-wise operation
+Binary element-wise \\functions take two vectors as input, perform an element-wise operation
 and produce a new vector. If either operand is a scalar, the single value is broadcast.
 \refTab{rule_elem_binary} presents the shape propagation rules for binary element-wise
 functions.
@@ -264,7 +265,7 @@ y       & \shapeS  & \shapeV{$c_0$} & \shapeV{$d_0$} & \shapeVS{$a_0$} \\ \hline
 %%% \end{table}
 
 \head{Unary element-wise functions.}
-Unary element-wise functions take a single vector as input and produce a new
+Unary element-wise \\functions take a single vector as input and produce a new
 output vector of the same size. Dataflow rules for shape are the identity in this case.
 % \refTab{rule_elem_unary} presents the rules for unary element-wise functions.
 
@@ -443,7 +444,7 @@ List functions apply a function (\texttt{@f}) on cells individually and merge th
 For example, the \texttt{@each} function is shown in \refFig{fig:list_function}.
 
 \begin{figure}[htbp]
-\begin{lstlisting}[language=HorseIR, frame=single, basicstyle=\footnotesize]
+\begin{lstlisting}[language=HorseIR, frame=single, basicstyle=\footnotesize, linewidth=.95\columnwidth]
 // x:i32, y:i32 vectors; @f function
 t0:list<i32> = @list(x, y);
 t1:list<i32> = @each(@f, t0);
@@ -475,7 +476,7 @@ function on each pair of cells to form a new list. Given input shapes \texttt{li
 \texttt{list<@f($L_{a0}, L_{b0}\texttt{)}, \ldots, \texttt{@f(}L_{a(n-1)}, L_{b(n-1)}\texttt{)}$>}.
 
 \head{Function raze} flattens a homogeneous list of vectors into a single vector, removing cell
-divisions. For any list the output shape is a dynamically sized vector \shapeV{d}.
+divisions. For any list, the output shape is a dynamically sized vector \shapeV{d}.
 
 \subsubsection{Other Functions}
 

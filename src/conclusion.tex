@@ -1,3 +1,16 @@
-Array-based languages are a natural fit for column-oriented database systems.  With a straightforward code generation strategy, however, benefits are reduced by the need to store intermediate results, and this is not easily compensated for by low-level optimizations on the generated code.  Our work exploits a higher level intermediate representation (HorseIR) to demonstrate that a methodical optimization approach can help identify loop fusion opportunities, allowing the multiple steps in query execution to be efficiently aggregated into single loops with composite operations. This greatly improves performance over more naive query-code generation, both in single and multi-processor execution contexts.
+Array-based languages are a natural fit for column-oriented database systems.
+With a straightforward code generation strategy, however, benefits are reduced
+by the need to store intermediate results, and this is not easily compensated
+for by low-level optimizations on the generated code.  Our work exploits a
+higher-level intermediate representation (HorseIR) to demonstrate that a
+methodical optimization approach can help identify loop fusion opportunities,
+allowing the multiple steps in query execution to be efficiently aggregated
+into single loops with composite operations. This greatly improves performance
+over more naive query-code generation, both in single and multi-processor
+execution contexts.
 
-Future work is aimed at expanding the set of strategies we have for fusing array-based operations.  Much of our current design remains conservative, and dynamic specialization or more complex, in-loop control flow may allow fusing statements with different shapes.  We are also interested in optimizing compile time, useful for runtime query generation.
+Future work is aimed at expanding the set of strategies we have for fusing
+array-based operations.  Much of our current design remains conservative, and
+dynamic specialization or more complex, in-loop control flow may allow fusing
+statements with different shapes.  We are also interested in optimizing
+compilation time, useful for runtime query generation.

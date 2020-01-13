@@ -1,7 +1,7 @@
 Conformability analysis determines fusible statements of a HorseIR program for code
 generation. Using the output of shape analysis, we partition the data dependence graph
 into \textit{fusible sections} and the independent statements. Two statements
-are in the same fusible section if they are conformable.
+are in the same fusible section if they are conforming.
 
 \subsection{Fusible Sections}
 
@@ -24,7 +24,7 @@ dependence graph).
 
 \begin{table}[htbp]
 \centering
-\caption{Conformable rules for two shapes} \label{tab:conformability}
+\caption{Conforming rules for two shapes} \label{tab:conformability}
 \begin{small}
 \begin{tabular}{c||c|c|c|c}
 \hline
@@ -45,7 +45,7 @@ dependence graph).
 
 Conformability analysis produces a list of fusible sections given the conformability of
 the statements. It traverses bottom up on the dependency graph (reverse topological order),
-and recursively fuses definition statements that are conformable with their uses. Each
+and recursively fuses definition statements that are conforming with their uses. Each
 recursive call tree therefore forms a single fused section that ends when no more
 statements may be fused. In addition to conformability, we ensure that reductions may
 only terminate fused sections and not be internal nodes. This restriction is due to the
@@ -96,7 +96,7 @@ allStmts $\gets$ reversed topological order of the graph G\;
 \SetKwFunction{Funcd}{fetchFusibleStmts}
 \SetKwProg{Fnd}{Function}{:}{}
 \Fnd{\Funcd{(A,P)}}{
-    \If( /* Rule 2 */){ isConformable(A, P)}{
+    \If( /* Rule 2 */){ isConforming(A, P)}{
         \Return{findFusibleSection(P)}\;
     }
     \Return $\varnothing$\;
@@ -204,7 +204,7 @@ and shape conformability.
 \textit{Rule 1:} candidate statements need concrete types (no wildcard or unknown types)
 and have built-in functions belonging to groups \{\texttt{E,R,S,X,B}\}.
 
-\textit{Rule 2:} candidate statements must be conformable with the shape of the definition
+\textit{Rule 2:} candidate statements must be conforming with the shape of the definition
 statements according to \refTable{tab:conformability}.
 
 Each iteration of the algorithm identifies statements adhering to the first rule, and
@@ -297,7 +297,7 @@ text format on the right hand side is \texttt{<statement>(<group>): <variable>::
 
 Given the HorseIR program in \refFig{fig:motivation_horseir}, our algorithm identifies a
 fusible section shown in \refFig{fig:fusion_example}. Initially, the variable \texttt{c0}
-is assigned a dynamic vector shape with unique ID, \texttt{V(d)}, as the exact size depends
+is assigned a dynamic vector shape with a unique ID, \texttt{V(d)}, as the exact size depends
 on the input table. Next, the 3 element-wise functions in statements \texttt{S0},
 \texttt{S1}, and \texttt{S2} propagate the vector shape \texttt{V(d)} according to the shape rules.
 Both compression functions in \texttt{S3} and \texttt{S4} generate a new shared scan shape

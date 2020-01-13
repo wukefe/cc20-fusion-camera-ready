@@ -25,7 +25,7 @@ allow code fusion.
 
 In the MATLAB-to-FORTRAN compiler~\cite{rose1999:techniques}, shape and size
 information can be obtained from a conformability analysis with a set of
-well-defined conformable operators for scalar, vector, and matrix.
+well-defined conforming operators for scalar, vector, and matrix.
 However, no further operator fusions after conformability analysis are provided.
 
 In the R programming language, a vectorizer is proposed for the built-in
@@ -63,7 +63,7 @@ complicated vectorization techniques~\cite{menon1999case,ChenKLH16}.
 
 \new{
 Loop fusion for query programs is typically achieved through a fixed set of
-complex predefined set of rules.
+complex predefined rules.
 The DBLAB/LB query compiler~\cite{ShaikhhaKPBD016} provides rules for
 different loop fusion algorithms to generate optimized code
 \cite{Shaikhha2018:LoopFusion}.
@@ -101,8 +101,8 @@ automatic fusion.
 %%% to perform element-wise fusion and common-loop-head fusion.
 TVM~\cite{Chen18:TVM}, a system designed for deep learning, introduces
 operator fusion for graph operators when generating efficient GPU code.
-Their approach is limited, as the fusion rules are fairly simple and
-specific to fusion between groups.
+Their approach is limited, as the fusion rules are fairly simple
+with specific patterns.
 We provide a more sophisticated fusion approach which considers more groups
 and defines systematic data-flow analysis to identify fusion opportunities.
 

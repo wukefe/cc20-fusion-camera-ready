@@ -33,6 +33,9 @@ spell:
 compare:
 	detex paper.tex | aspell -a | env LANG=C sort -u | env LANG=C comm -23 - ok-words
 
+grammar:  ## copy to grammar check
+	detex paper.tex > only-words.txt
+
 artifact:
 	set -x && cd artifact && pdflatex -halt-on-error main
 
@@ -46,3 +49,9 @@ clean:
 	rm -f *.toc
 	rm -f *.out
 	rm -f *~
+
+clean-diff: clean
+	rm -f diff-ready.tex
+	rm -f diff-submitted.tex
+
+

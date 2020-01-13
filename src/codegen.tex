@@ -365,7 +365,7 @@ on the size ratio to choose which loop runs in parallel.
 
 Fusible sections can be merged if:
 (1) they share the same loop head, and
-(2) there is no data dependence between the loop bodies.
+(2) there is no data dependency between the loop bodies.
 This is particularly useful in column-based IMDBs where data is fetched
 from multiple independent columns using a single array of indices (e.g. the result
 of a join). It also reduces the number of parallel synchronization barriers.

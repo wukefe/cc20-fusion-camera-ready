@@ -52,7 +52,7 @@ R = sum(filter(C, A))
 
 \noindent{}where the condition \texttt{C} is a boolean vector, the input array \texttt{A}
 is a vector with the same number of elements, and the result \texttt{R} is a
-scalar.  A straightforward way to generate C code from this is to generate two loops, the first applying the boolean selection and producing an intermediate result, and the second loop performing the reduction on this intermediate result.  A more optimized version, however, would fuse the two loops into one, performing the reduction on the fly and avoiding generation of an intermediate result:
+scalar.  A straightforward way to generate C code from this is to generate two loops, the first applying the boolean selection and producing an intermediate result, and the second loop performing the reduction on this intermediate result.  A more optimized version, however, would fuse the two loops into one, performing the reduction on the fly and avoiding the generation of an intermediate result:
 
 % basicstyle: \tiny, \small, or \footnotesize
 % linewidth=.92\columnwidth
@@ -100,7 +100,7 @@ for(int i=0; i<C.size; i++) {
 %% currently no optimization across those functions can be performed.
 \noindent{}The analysis required to generate such code from a series of built-in functions, however, is complex,
 depending on non-trivial array dependency analysis as well as knowledge of array dimensions, and 
-while possible in principle, our experience has been that these optimization opportunities are not found by our available C compilers.
+while possible in principle, our experience has been that these optimization opportunities are not found by available C compilers.
 
 % \refFig{fig:fusion_idea} shows that we propose automatic fusion which contains
 % element-wise fusion and some parts of pattern-based fusion

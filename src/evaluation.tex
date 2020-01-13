@@ -11,8 +11,7 @@ code with optimization level \texttt{-O3} and \texttt{-march=native} enabled.
 We use the latest MonetDB~\cite{IdreosS2012} released in \textit{Apr2019} with
 version v11.33.3, as a baseline comparison for the following HorseIR versions:
 (1) HorseIR-noopt: no optimizations;
-(2) HorseIR-opt1 : element-wise and pattern-based
-fusion from previous work~\OldPaper; and
+(2) HorseIR-opt1 : element-wise and pattern-based fusion from \OldPaper; and
 (3) HorseIR-opt2 : fusion approach presented in this paper.
 
 \head{Execution time.}
@@ -85,7 +84,7 @@ approach is worse than one of the other approaches, and only by a small margin.
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=.86\columnwidth]{./src/figure/sf1-speedup.pdf}
+\includegraphics[width=.85\columnwidth]{./src/figure/sf1-speedup.pdf}
 \vspace{-3mm}
 \caption{Geometric means of TPC-H queries with 1GB input data (SF1).}
 \label{fig:tpch_sf1_speedup}
@@ -103,10 +102,27 @@ statement (\texttt{@compress}) are fused together. In both cases, intermediate
 results are avoided and performance improved. In q12/q19, more statements
 are fused and less intermediate results created but the effect is weaker.
 
+%% \textit{When we are worse.}
+%% In q14/q22, the fused loop sizes are relatively small with long expressions in
+%% the body. Thus, fusion introduces complexity without significantly fewer
+%% iterations. 
+
 \textit{When we are worse.}
-In q14/q22, the fused loop sizes are relatively small with long expressions in
-the body. Thus, fusion introduces complexity without significantly fewer
-iterations. 
+In q14/q22, the fused loop sizes are relatively small with complex expressions in
+the body.
+For example, the complex code is generated for fusing element-wise and
+\texttt{like} functions in q14.
+
+%% For example, the complex code is generated for mixing element-wise functions
+%% and the string matching function \texttt{like} in q14.
+
+%% \textit{When we are worse.}
+%% In q14/q22, the fused loop sizes are relatively small with complex expressions in
+%% the body.
+%% For example, element-wise functions and special boolean functions (such as
+%% \texttt{like}) are fused in q14.
+%% The complex code is generated because it has to adopt the parallel and
+%% JIT-based code for string matching while fusing element-wise functions.
 
 \textit{When we behave similarly.}
 For queries q4 and q16, the filters are very selective and only a few rows
@@ -136,14 +152,14 @@ more systematic and general approach than patterns.}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=.86\columnwidth]{./src/figure/bar-number.pdf}
+\includegraphics[width=.85\columnwidth]{./src/figure/bar-number.pdf}
 \vspace{-3mm}
 \caption{Number of element-wise fused statements in HorseIR-opt1 and our new
 fusion in HorseIR-opt2.}
 \label{fig:opt_number}
 \end{figure}
 
-\refFig{fig:opt_number} shows the the number of fused statements using
+\refFig{fig:opt_number} shows the number of fused statements using
 element-wise fusion in HorseIR-opt1 and the more general function fusion in
 HorseIR-opt2. Pattern-based fusion is not shown as both approaches use the
 same patterns. 
@@ -167,7 +183,7 @@ bodies decrease performance.
 
 \new{The compilation time of the generated C code seen in \refFig{fig:compilation_time}
 shows that our technique is slower to generate the binary than more naive approaches.
-However, the increase in compilation time is associated with exploitation of additional
+However, the increase in compilation time is associated with the exploitation of additional
 optimization opportunities that benefit the execution time. With large data sizes
 common to modern applications or repeated query execution, the compilation time can
 be effectively amortized.}
