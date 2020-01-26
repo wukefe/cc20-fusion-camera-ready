@@ -1,4 +1,6 @@
-**Note: This repo has been linked to overleaf.**
+**Note 1: This repo has been linked to overleaf.**
+
+**Note 2: This repository has been uploaded to our svn server with a new name cc20fusion.**
 
 ## Conference Information
 
@@ -44,6 +46,20 @@ Overleaf option (Online)
 
     - select main.tex
     - choose recompile
+
+### Run with script
+
+See all options
+
+    ./run.sh
+
+Prepare latex source code for submission
+
+    ./run.sh src   ## save to chen-latex-src.zip
+
+Compare the camera-ready version and the submitted-review version
+
+    ./run.sh diff
 
 ### Versions
 
