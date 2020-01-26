@@ -1,6 +1,6 @@
 .PHONY: all paper long clean artifact
 
-all: build # paper
+all: paper
 
 paper:
 	pdflatex -halt-on-error $@

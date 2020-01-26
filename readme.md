@@ -57,7 +57,7 @@ Prepare latex source code for submission
 
     ./run.sh src   ## save to chen-latex-src.zip
 
-Compare the camera-ready version and the submitted-review version
+Compare the camera-ready version and the draft-review version
 
     ./run.sh diff
 

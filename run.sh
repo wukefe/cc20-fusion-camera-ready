@@ -8,9 +8,9 @@ usage(){
 }
 
 build_diff(){
-    (cd cc20-fusion-submitted && latexpand paper.tex > ../diff-submitted.tex) && \
+    (cd cc20-draft-review && latexpand paper.tex > ../diff-draft.tex) && \
         latexpand paper.tex > diff-ready.tex && \
-        latexdiff diff-submitted.tex diff-ready.tex > diff.tex && \
+        latexdiff diff-draft.tex diff-ready.tex > diff.tex && \
         make diff && echo "Building diff.pdf successfully!!"
 }
 
